@@ -5,21 +5,116 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Documents — Protocol</title>
   <link rel="stylesheet" href="../css/style.css" />
+
+  <link rel="stylesheet" href="../css/documents.css" />
 </head>
 <body>
 
   <div id="site-nav"></div>
 
-  <main class="stub-page">
-    <div class="icon">[ DOC ]</div>
-    <h1>Documents</h1>
-    <p>TODO - Upload, Download, View, Search, Save analytics, Save changes made to documents, Ablity to change/add comments,...</p>
-    <a href="../index.html" class="btn btn-primary">Ve</a>
+  <div class="doc-root">
+
+  <main class="documents-container">
+    
+    <a class="back-link" href="../index.html">
+      <i class="ti ti-arrow-left"></i> Trang chủ
+    </a>
+
+    <div class="doc-hero">
+      <h1 class="hero-title">
+        Khám phá nghiên cứu khoa học và nâng cao hiệu quả nghiên cứu
+        <span class="hero-accent">✦</span>
+      </h1>
+      <p class="hero-sub">Lưu trữ, xử lý tài liệu (DOC) và tối ưu hóa công cụ tìm kiếm học thuật chuyên sâu.</p>
+      <div class="tags-row">
+        <span class="tag-label">Gợi ý tìm kiếm:</span>
+        <span class="tag" onclick="fillSearch('SEM')">SEM</span>
+        <span class="tag" onclick="fillSearch('PLS-SEM')">PLS-SEM</span>
+        <span class="tag" onclick="fillSearch('AI trong giáo dục')">AI trong giáo dục</span>
+        <span class="tag" onclick="fillSearch('Hành vi người tiêu dùng')">Hành vi người tiêu dùng</span>
+      </div>
+    </div>
+
+    <div class="two-col">
+
+      <div class="doc-card">
+        <div class="card-section-label">
+          Research Search Engine (Standard)
+          <span class="mode-badge">Free Mode</span>
+        </div>
+
+        <input id="search-q" class="search-input" type="text" placeholder="Tìm kiếm tài liệu, bài nghiên cứu...">
+
+        <div class="chips">
+          <button class="chip" onclick="fillSearch('Cấu trúc nghiên cứu')">📚 Cấu trúc nghiên cứu</button>
+          <button class="chip" onclick="fillSearch('Viết theo từng bước')">📋 Viết theo từng bước</button>
+          <button class="chip" onclick="fillSearch('Phần mềm định lượng')">📊 Phần mềm định lượng</button>
+          <button class="chip" onclick="fillSearch('Phương pháp nghiên cứu')">📖 Phương pháp nghiên cứu</button>
+          <button class="chip" onclick="fillSearch('Mẹo viết học thuật')">💡 Mẹo viết học thuật</button>
+        </div>
+
+        <hr class="divider">
+
+        <div class="premium-box">
+          <div class="premium-header">
+            <span class="premium-title">👑 Premium Features</span>
+            <span class="pro-badge">PRO ONLY</span>
+          </div>
+          <div class="premium-grid">
+            <input class="premium-input" type="text" placeholder="Bộ lọc theo độ uy tín" disabled>
+            <input class="premium-input" type="text" placeholder="Số lượng quan tâm" disabled>
+          </div>
+          <div class="premium-grid">
+            <div class="pf">✨ Gợi ý bài bằng AI</div>
+            <div class="pf">♾️ Lưu không giới hạn</div>
+          </div>
+          <div class="pf" style="margin-top:8px">💎 Truy cập tài liệu học thuật chuyên sâu</div>
+        </div>
+
+        <button class="btn-blue" onclick="handleSearch()">Tìm kiếm dữ liệu</button>
+      </div>
+
+      <div class="doc-card">
+        <div class="card-section-label">Xử lý &amp; Lưu trữ tài liệu</div>
+
+        <input id="doc-name" class="doc-input" type="text" placeholder="Tên định danh tài liệu học thuật...">
+
+        <input type="file" id="file-real" style="display:none" accept=".pdf,.docx,.spss,.sav" onchange="handleFile(this)">
+        <div class="drop-zone" id="drop-zone"
+          onclick="document.getElementById('file-real').click()"
+          ondragover="event.preventDefault();this.classList.add('over')"
+          ondragleave="this.classList.remove('over')"
+          ondrop="handleDrop(event)">
+          <span class="drop-icon">📤</span>
+          <div class="drop-title">Kéo thả hoặc click chọn tệp tin học thuật</div>
+          <div class="drop-sub">Hỗ trợ định dạng cao cấp định lượng (.pdf, .docx, .spss)</div>
+          <div class="file-name-display" id="file-label"></div>
+        </div>
+
+        <button class="btn-green" onclick="handleSave()">Lưu vào kho tài liệu</button>
+      </div>
+    </div>
+
+    <div class="list-card">
+      <div class="list-header">
+        <div class="list-title">Tài liệu nổi bật dành cho bạn</div>
+        <span class="count-pill" id="count-pill">02 Tài liệu hệ thống</span>
+      </div>
+      <div id="doc-list"></div>
+    </div>
+
   </main>
 
   <div id="site-footer"></div>
 
+  <script src="../js/documents.js"></script>
   <script src="../js/nav.js"></script>
-
+  
+  <script>
+    // Phải gọi sau khi đã load xong file documents.js ở trên
+    if (typeof renderList === 'function' && typeof docs !== 'undefined') {
+        renderList(docs);
+    }
+  </script>
 </body>
 </html>
