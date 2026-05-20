@@ -1,25 +1,97 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Forum — Protocol</title>
-  <link rel="stylesheet" href="../css/style.css" />
-</head>
-<body>
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartStudy - Cộng đồng Học tập</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="stylef.css" />
+  </head>
+  <body class="bg-gray-50 dark:bg-[#151521]">
+    <div class="max-w-4xl mx-auto h-[calc(100vh-100px)] flex flex-col pt-10">
+      <header class="flex flex-col gap-4 mb-6 px-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+              Cộng đồng Học tập
+            </h2>
+            <p class="text-gray-500 dark:text-gray-400">
+              Trao đổi dành riêng cho thành viên đã đăng ký
+            </p>
+          </div>
+          <button
+            id="btn-open-modal"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg transition-transform active:scale-95"
+          >
+            <i data-lucide="plus" class="w-5 h-5"></i> Bài viết mới
+          </button>
+        </div>
+        <div
+          class="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2"
+          id="tags-container"
+        ></div>
+      </header>
 
-  <div id="site-nav"></div>
+      <div
+        id="posts-container"
+        class="flex-1 overflow-y-auto custom-scrollbar space-y-4 pb-10 px-4"
+      ></div>
+    </div>
 
-  <main class="stub-page">
-    <div class="icon">[ MSG ]</div>
-    <h1>Forum</h1>
-    <p>TODO - Save data cloudly on the server machine, Tag func, Mention func, Group func, Blogs, Vote system, Summarize func,...</p>
-    <a href="../index.html" class="btn btn-primary">Ve</a>
-  </main>
+    <div
+      id="create-modal"
+      class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm"
+    >
+      <div
+        class="bg-white dark:bg-[#28292c] w-full max-w-lg rounded-2xl shadow-2xl p-6 relative"
+      >
+        <button
+          id="btn-close-modal"
+          class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+        >
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+        <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+          Tạo bài viết mới
+        </h3>
+        <div class="space-y-4">
+          <input
+            type="text"
+            id="post-title"
+            placeholder="Tiêu đề bài viết"
+            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#3c4043] text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <textarea
+            id="post-content"
+            placeholder="Nội dung chia sẻ..."
+            rows="5"
+            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#3c4043] text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+          ></textarea>
+          <input
+            type="text"
+            id="post-tags"
+            placeholder="Tags (cách nhau bởi dấu phẩy): Hỏi đáp, Tips..."
+            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#3c4043] text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <div class="flex justify-end gap-2 pt-2">
+            <button
+              id="btn-cancel-modal"
+              class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg font-medium"
+            >
+              Hủy
+            </button>
+            <button
+              id="btn-submit-post"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+            >
+              Đăng bài
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <div id="site-footer"></div>
-
-  <script src="../js/nav.js"></script>
-
-</body>
+    <script src="navf.js"></script>
+  </body>
 </html>

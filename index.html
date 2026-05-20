@@ -1,96 +1,105 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Protocol</title>
-  <link rel="stylesheet" href="css/style.css" />
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Protocol</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div id="site-nav"></div>
 
-  <div id="site-nav"></div>
+    <main>
+      <section class="hero" aria-label="Search section">
+        <span class="hero-label">Rau má &bull; Rau muống &bull; Rau dền</span>
 
-  <main>
+        <h1 class="hero-title">
+          Your Knowledge,<br />All in One Place (I think so)
+        </h1>
 
-    <!-- Hero / Search -->
-    <section class="hero" aria-label="Search section">
+        <p class="hero-subtitle">Think of a better des lol</p>
 
-      <span class="hero-label">Rau má &bull; Rau muống &bull; Rau dền</span>
+        <form class="search-bar" role="search" action="#" method="get">
+          <span class="search-bar-icon" aria-hidden="true">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </span>
 
-      <h1 class="hero-title">Your Knowledge,<br>All in One Place (I think so)</h1>
+          <input
+            type="search"
+            name="q"
+            placeholder="Yu, Sansan..."
+            aria-label="Search"
+          />
 
-      <p class="hero-subtitle">
-        Think of a better des lol
-      </p>
+          <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+      </section>
 
-      <form class="search-bar" role="search" action="#" method="get">
+      <section class="features" aria-label="Main features">
+        <p class="features-title">Test 1 2 3 alo</p>
 
-        <span class="search-bar-icon" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-               viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-        </span>
+        <div class="features-grid">
+          <a
+            href="pages/doc/documents.html"
+            class="card"
+            aria-label="Go to Documents"
+          >
+            <div class="card-icon" aria-hidden="true">:3</div>
+            <div class="card-title">Documents</div>
+            <p class="card-desc">Xem tải và phân tích các tài liệu or sum</p>
+            <span class="card-arrow">Rau má 20k gần đường tàu &rarr;</span>
+          </a>
 
-        <input
-          type="search"
-          name="q"
-          placeholder="Yu, Sansan..."
-          aria-label="Search"
-        />
+          <a
+            href="pages/forum/forum.html"
+            class="card"
+            aria-label="Go to Forum"
+          >
+            <div class="card-icon" aria-hidden="true">:3</div>
+            <div class="card-title">Forum</div>
+            <p class="card-desc">Thảo luận, hỏi đáp và chia sẻ kiến thức yay</p>
+            <span class="card-arrow">36 thanh hóa &rarr;</span>
+          </a>
 
-        <button type="submit" class="btn btn-primary">Search</button>
+          <a
+            href="pages/chat/connects.html"
+            class="card"
+            aria-label="Go to Connects"
+          >
+            <div class="card-icon" aria-hidden="true">:3</div>
+            <div class="card-title">Connects</div>
+            <p class="card-desc">
+              Kết nối với bạn bè, mentors hoặc researchers (add more text so it
+              looks filler)
+            </p>
+            <span class="card-arrow">Kết nối ngay hay cái gì đấy &rarr;</span>
+          </a>
 
-      </form>
+          <a href="pages/AIs/" class="card" aria-label="use AI Tools here">
+            <div class="card-icon" aria-hidden="true">:3</div>
+            <div class="card-title">AI Tools</div>
+            <p class="card-desc">Đồ AI đi ở đây</p>
+            <span class="card-arrow">test 123 &rarr;</span>
+          </a>
+        </div>
+      </section>
+    </main>
 
-    </section>
+    <div id="site-footer"></div>
 
-    <!-- Feature Cards -->
-    <section class="features" aria-label="Main features">
-
-      <p class="features-title">Test 1 2 3 alo</p>
-
-      <div class="features-grid">
-
-        <a href="pages/doc/documents.html" class="card" aria-label="Go to Documents">
-          <div class="card-icon" aria-hidden="true">:3</div>
-          <div class="card-title">Documents</div>
-          <p class="card-desc">Xem tải và phân tích các tài liệu or sum</p>
-          <span class="card-arrow">Rau má 20k gần đường tàu &rarr;</span>
-        </a>
-
-        <a href="pages/forum/forum.html" class="card" aria-label="Go to Forum">
-          <div class="card-icon" aria-hidden="true">:3</div>
-          <div class="card-title">Forum</div>
-          <p class="card-desc">Thảo luận, hỏi đáp và chia sẻ kiến thức yay</p>
-          <span class="card-arrow">36 thanh hóa &rarr;</span>
-        </a>
-
-        <a href="pages/chat/connects.html" class="card" aria-label="Go to Connects">
-          <div class="card-icon" aria-hidden="true">:3</div>
-          <div class="card-title">Connects</div>
-          <p class="card-desc">Kết nối với bạn bè, mentors hoặc researchers (add more text so it looks filler)</p>
-          <span class="card-arrow">Kết nối ngay hay cái gì đấy &rarr;</span>
-        </a>
-
-        <a href="pages/AIs/" class="card" aria-label="use AI Tools here">
-          <div class="card-icon" aria-hidden="true">:3</div>
-          <div class="card-title">AI Tools</div>
-          <p class="card-desc">Đồ AI đi ở đây</p>
-          <span class="card-arrow">test 123 &rarr;</span>
-        </a>
-
-      </div>
-
-    </section>
-
-  </main>
-
-  <div id="site-footer"></div>
-
-  <script src="js/nav.js"></script>
-
-</body>
+    <script src="js/nav.js"></script>
+  </body>
 </html>

@@ -1,0 +1,26 @@
+{
+  "name": "prototype_web",
+  "version": "1.0.0",
+  "description": "Current Structure\r    Protocol_Project/\r    ├── index.html          ← Main homepage\r    ├── css/\r    │   └── style.css       ← Reusable CSS (Style)\r    ├── js/ \r    │   └── nav.js          ← Reusable Stuffs\r    └── pages/\r        ├── documents.html  ← Sub page\r        ├── forum.html      ← Sub page\r        └── connects.html   ← Sub page",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/th706020-spec/Prototype_Web.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/th706020-spec/Prototype_Web/issues"
+  },
+  "homepage": "https://github.com/th706020-spec/Prototype_Web#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "sqlite3": "^6.0.1"
+  }
+}

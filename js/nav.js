@@ -1,13 +1,8 @@
-/* Shared nav.js — injects navbar and footer into every page */
-
 (function () {
+  const inSubdir = window.location.pathname.includes("/pages/");
+  const base = inSubdir ? "../" : "";
 
-  /* Detect if we are inside a subdirectory (e.g. /pages/) */
-  const inSubdir = window.location.pathname.includes('/pages/');
-  const base     = inSubdir ? '../' : '';
-
-  /* --- Navbar --- */
-  const navEl = document.getElementById('site-nav');
+  const navEl = document.getElementById("site-nav");
 
   if (navEl) {
     navEl.innerHTML = `
@@ -26,6 +21,7 @@
           </div>
 
           <div class="navbar-auth">
+            <button id="theme-toggle" class="btn btn-outline" title="Chuyển đổi Sáng/Tối">🌙</button>
             <a href="#" class="btn btn-outline">Log In</a>
             <a href="#" class="btn btn-primary">Sign Up</a>
           </div>
@@ -34,16 +30,39 @@
       </nav>
     `;
 
-    /* Mark the matching nav link as active */
-    navEl.querySelectorAll('.navbar-links a').forEach(function (link) {
+    navEl.querySelectorAll(".navbar-links a").forEach(function (link) {
       if (link.href === window.location.href) {
-        link.classList.add('active');
+        link.classList.add("active");
       }
     });
+
+    const themeToggleBtn = document.getElementById("theme-toggle");
+    const body = document.body;
+
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
+      body.classList.add("dark");
+      if (themeToggleBtn) themeToggleBtn.innerText = "☀️";
+    }
+
+    if (themeToggleBtn) {
+      themeToggleBtn.addEventListener("click", () => {
+        body.classList.toggle("dark");
+
+        const isDarkMode = body.classList.contains("dark");
+
+        if (isDarkMode) {
+          themeToggleBtn.innerText = "☀️";
+          localStorage.setItem("theme", "dark");
+        } else {
+          themeToggleBtn.innerText = "🌙";
+          localStorage.setItem("theme", "light");
+        }
+      });
+    }
   }
 
-  /* --- Footer --- */
-  const footerEl = document.getElementById('site-footer');
+  const footerEl = document.getElementById("site-footer");
 
   if (footerEl) {
     footerEl.innerHTML = `
@@ -52,5 +71,4 @@
       </footer>
     `;
   }
-
 })();
