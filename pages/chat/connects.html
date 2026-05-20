@@ -18,7 +18,7 @@
               <div class="chat-header-avatar-wrapper">
                 <img
                   id="chat-header-avatar"
-                  src="https://vcdn1-giaitri.vnecdn.net/2026/01/08/james-nhom-cortis-tai-su-kien-dior-1767840271-1767840287-1767841187.jpg?w=460&h=0&q=100&dpr=2&fit=crop&s=3AqqCtG3qbDfymg-qNqUGA"
+                  src="https://ui-avatars.com/api/?name=?&background=aaa&color=fff"
                   alt="Avatar"
                 />
                 <span class="chat-header-active-dot"></span>
@@ -90,13 +90,13 @@
             <div class="profile-avatar-wrapper">
               <img
                 class="profile-avatar"
-                src="https://stylerepublik.vn/media/full/2025/10/1760502614_martin_cortis_1757331923_3717092046088439761_36026758022-jpg.jpg"
-                alt="Cu bin"
+                  src="https://ui-avatars.com/api/?name=User&background=5b85f6&color=fff"
+                  alt="Profile"
               />
               <span class="active-status"></span>
             </div>
-            <h2 class="profile-name">Cu bin</h2>
-            <span class="profile-title">idol K-Pop</span>
+              <h2 class="profile-name">—</h2>
+              <span class="profile-title">Member</span>
           </div>
 
           <div class="action-bar">
@@ -110,46 +110,8 @@
               <h3>Thành viên</h3>
               <a href="#" id="btn-view-all-members">Xem tất cả</a>
             </div>
-            <div class="messenger-row">
-              <div class="avatar-with-status">
-                <img
-                  class="row-avatar"
-                  src="https://vcdn1-giaitri.vnecdn.net/2026/01/08/james-nhom-cortis-tai-su-kien-dior-1767840271-1767840287-1767841187.jpg?w=460&h=0&q=100&dpr=2&fit=crop&s=3AqqCtG3qbDfymg-qNqUGA"
-                  alt="Thành viên"
-                />
-                <span class="status-dot"></span>
-              </div>
-              <div class="row-info">
-                <h4>chêm</h4>
-                <span>Đang hoạt động</span>
-              </div>
-            </div>
-            <div class="messenger-row">
-              <div class="avatar-with-status">
-                <img
-                  class="row-avatar"
-                  src="https://vtcpay.vn/blog/wp-content/uploads/2026/03/cortis-thanh-vien-03.webp"
-                  alt="Thành viên"
-                />
-              </div>
-              <div class="row-info">
-                <h4>chu hun</h4>
-                <span>Hoạt động 25 phút trước</span>
-              </div>
-            </div>
-            <div class="messenger-row">
-              <div class="avatar-with-status">
-                <img
-                  class="row-avatar"
-                  src="https://vtcpay.vn/blog/wp-content/uploads/2026/03/cortis-thanh-vien-04.webp"
-                  alt="Thành viên"
-                />
-                <span class="status-dot"></span>
-              </div>
-              <div class="row-info">
-                <h4>sông hơi</h4>
-                <span>Đang hoạt động</span>
-              </div>
+            <div id="member-rows">
+              <div style="padding:12px;color:var(--clr-muted);font-size:13px">Đang tải...</div>
             </div>
           </div>
 
@@ -158,20 +120,8 @@
               <h3>Kết nối Mentor</h3>
               <a href="#" id="btn-view-all-mentors">Xem tất cả</a>
             </div>
-            <div class="messenger-row">
-              <div class="avatar-with-status">
-                <img
-                  class="row-avatar"
-                  src="https://bloganchoi.com/wp-content/uploads/2025/08/profile-nhom-nhac-cortis-kpop-7-696x910.jpg"
-                  alt="Mentor"
-                />
-                <span class="status-dot"></span>
-              </div>
-              <div class="row-info">
-                <h4>kẹo con</h4>
-                <span>nhảy nhảy</span>
-              </div>
-              <span class="row-action status-color">Online</span>
+            <div id="mentor-rows">
+              <div style="padding:12px;color:var(--clr-muted);font-size:13px">Đang tải...</div>
             </div>
             <button class="find-mentor-btn" id="btn-find-mentor">
               Tìm mentor phù hợp
@@ -193,7 +143,9 @@
       </div>
     </div>
 
-    <script src="../../js/nav.js"></script>
+  <script src="../../js/config.js"></script>
+  <script src="../../js/auth.js"></script>
+  <script src="../../js/nav.js"></script>
     <script src="navc.js"></script>
   </body>
 </html>

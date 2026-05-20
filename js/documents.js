@@ -1,153 +1,239 @@
-// 1. Danh sách dữ liệu mẫu ban đầu
-let docs = [
-  { id: 1, author: 'Messi vô địch world cup!!!!!', title: 'Báo đời', univ: 'FPT University', field: 'Nghiên cứu động vật', interest: 2341, tags: ['Digital Marketing', 'Artificial Intelligence'], saved: false },
-  { id: 2, author: '7 tạ mãi thua Messi', title: 'Báo nợ', univ: 'FPT University', field: 'Nghiên cứu động vật', interest: 942, tags: ['Multimedia Communications', 'Semiconductor microcircuits'], saved: false }
-];
+// API base URL — set by js/config.js (loaded first)
+const API = window.AppConfig.API;
 
-// 2. Hàm rút gọn định dạng số lượt quan tâm (Ví dụ: 2341 -> 2.3k)
-function fmt(n) { 
-  return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n); 
+let docs = [];
+let pendingFile = null;
+
+// Format interest count
+function fmt(n) {
+  return n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n);
 }
 
-// 3. Hàm đổ dữ liệu từ mảng ra giao diện HTML
+// Render document list
 function renderList(list) {
-  const el = document.getElementById('doc-list');
-  const pill = document.getElementById('count-pill');
+  const el = document.getElementById("doc-list");
+  const pill = document.getElementById("count-pill");
   if (!el || !pill) return;
 
-  pill.textContent = String(list.length).padStart(2, '0') + ' Tài liệu hệ thống';
+  pill.textContent = String(list.length).padStart(2, "0") + " Tài liệu hệ thống";
+
   if (!list.length) {
     el.innerHTML = '<div class="doc-empty">Không tìm thấy tài liệu nào</div>';
     return;
   }
-  el.innerHTML = list.map(d => `
+
+  el.innerHTML = list
+    .map(
+      (d) => `
     <div class="doc-item">
       <div style="flex:1">
         <div class="doc-meta">
           <span class="q1">Q1</span>
-          <span class="doc-author">${d.author}</span>
+          <span class="doc-author">${d.uploader || d.author || "—"}</span>
         </div>
-        <h4 class="doc-title" onclick="viewDocument('${d.title}')">${d.title}</h4>
-        <p class="doc-univ">${d.univ}</p>
+        <h4 class="doc-title">${d.name || d.title}</h4>
+        <p class="doc-univ">${d.univ || "—"}</p>
         <div class="doc-footer">
-          <span>${d.field}</span>
-          <span class="doc-interest"><span class="fire">🔥</span> ${fmt(d.interest)} Quan Tâm</span>
-          ${d.tags.map(t => `<span class="doc-tag">${t}</span>`).join('')}
+          <span>${d.field || "—"}</span>
+          ${d.original_name ? `<span class="doc-interest">📄 ${d.original_name}</span>` : ""}
+          ${d.interest ? `<span class="doc-interest"><span class="fire">🔥</span> ${fmt(d.interest)} Quan Tâm</span>` : ""}
+          ${(d.tags || []).map((t) => `<span class="doc-tag">${t}</span>`).join("")}
         </div>
       </div>
       <div class="doc-actions">
-        <button class="btn-bm ${d.saved ? 'saved' : ''}" onclick="toggleSave(${d.id})" title="Lưu Bookmark">🔖</button>
-        <button class="btn-dl" style="border-color: #a855f7; color: #a855f7;" onclick="analyzeDoc('${d.title}')">✨ Phân tích AI</button>
-        <button class="btn-dl">Tải về</button>
+        <button class="btn-dl" style="border-color:#a855f7;color:#a855f7"
+          onclick="analyzeDoc('${(d.name || d.title || "").replace(/'/g, "\\'")}')">✨ Phân tích AI</button>
+        ${
+          d.filename
+            ? `<button class="btn-dl" onclick="viewDocument('${d.filename}','${(d.name||"").replace(/'/g,"\\'")}','${(d.original_name||"").replace(/'/g,"\\'")}')">👁 Xem</button>
+               <button class="btn-dl" onclick="downloadDoc('${d.filename}','${(d.original_name || "").replace(/'/g, "\\'")}')">⬇ Tải về</button>`
+            : ""
+        }
       </div>
     </div>
-  `).join('');
+  `
+    )
+    .join("");
 }
 
-// 4. Hàm bật/tắt trạng thái Bookmark (Lưu tài liệu)
-function toggleSave(id) {
-  const d = docs.find(x => x.id === id);
-  if (d) d.saved = !d.saved;
-  renderList(docs);
+// Safe fetch wrapper — returns parsed JSON or throws a readable error
+async function fetchJSON(url, options) {
+  const res = await fetch(url, options);
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch {
+    throw new Error("Server returned an unexpected response (is the server running?)");
+  }
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
 }
 
-// 5. Hàm điền nhanh từ khóa từ khu vực "Gợi ý tìm kiếm" vào ô input
-function fillSearch(val) {
-  const input = document.getElementById('search-q');
-  if (input) {
-    input.value = val;
-    handleSearch(); // Tự động chạy tìm kiếm luôn khi click vào chip gợi ý
+// Load docs from server
+async function loadDocs() {
+  try {
+    docs = await fetchJSON(`${API}/docs`);
+    renderList(docs);
+  } catch {
+    renderList([]);
   }
 }
 
-// 6. Hàm lọc và tìm kiếm tài liệu theo từ khóa
+// File input change
+function handleFile(input) {
+  const label = document.getElementById("file-label");
+  if (input.files.length) {
+    pendingFile = input.files[0];
+    if (label) label.textContent = pendingFile.name;
+  }
+}
+
+// Drag and drop
+function handleDrop(e) {
+  e.preventDefault();
+  const zone = document.getElementById("drop-zone");
+  const label = document.getElementById("file-label");
+  if (zone) zone.classList.remove("over");
+  const f = e.dataTransfer.files[0];
+  if (f) {
+    pendingFile = f;
+    if (label) label.textContent = f.name;
+  }
+}
+
+// Upload file to server
+async function handleSave() {
+  const nameInput = document.getElementById("doc-name");
+  if (!nameInput) return;
+
+  const name = nameInput.value.trim();
+  if (!name) {
+    alert("Vui lòng nhập tên tài liệu!");
+    return;
+  }
+  if (!pendingFile) {
+    alert("Vui lòng chọn tệp tin!");
+    return;
+  }
+
+  const btn = document.querySelector(".btn-green");
+  if (btn) { btn.disabled = true; btn.textContent = "Đang lưu..."; }
+
+  try {
+    const formData = new FormData();
+    formData.append("file", pendingFile);
+    formData.append("name", name);
+
+    const token = window.Auth ? window.Auth.getToken() : null;
+    const headers = token ? { Authorization: "Bearer " + token } : {};
+
+    const data = await fetchJSON(`${API}/docs/upload`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+
+    if (!data.id) throw new Error("Upload did not return a document ID");
+
+    // Reset form
+    nameInput.value = "";
+    pendingFile = null;
+    const label = document.getElementById("file-label");
+    const fileReal = document.getElementById("file-real");
+    if (label) label.textContent = "";
+    if (fileReal) fileReal.value = "";
+
+    await loadDocs();
+  } catch (err) {
+    alert("Lỗi: " + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Lưu vào kho tài liệu"; }
+  }
+}
+
+// Download a file
+function downloadDoc(filename, originalName) {
+  if (!filename) return;
+  const a = document.createElement("a");
+  a.href = `${API}/docs/file/${filename}`;
+  a.download = originalName || filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// Fill search from tag chips
+function fillSearch(val) {
+  const input = document.getElementById("search-q");
+  if (input) {
+    input.value = val;
+    handleSearch();
+  }
+}
+
+// Search/filter
 function handleSearch() {
-  const input = document.getElementById('search-q');
+  const input = document.getElementById("search-q");
   if (!input) return;
-  
   const q = input.value.toLowerCase().trim();
   if (!q) { renderList(docs); return; }
-  
-  const res = docs.filter(d =>
-    d.title.toLowerCase().includes(q) ||
-    d.field.toLowerCase().includes(q) ||
-    d.tags.some(t => t.toLowerCase().includes(q))
+  const res = docs.filter(
+    (d) =>
+      (d.name || d.title || "").toLowerCase().includes(q) ||
+      (d.field || "").toLowerCase().includes(q) ||
+      (d.original_name || "").toLowerCase().includes(q)
   );
   renderList(res);
 }
 
-// 7. Hàm bắt sự kiện khi click chọn file từ máy tính
-function handleFile(input) {
-  const label = document.getElementById('file-label');
-  if (input.files.length && label) {
-    label.textContent = input.files[0].name;
+function viewDocument(filename, name, originalName) {
+  if (!filename) { alert("Không có tệp để xem."); return; }
+
+  let modal = document.getElementById("doc-viewer-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "doc-viewer-modal";
+    modal.className = "modal-overlay";
+    modal.style.display = "none";
+    modal.innerHTML = `
+      <div class="modal-box" style="width:90vw;max-width:960px;height:88vh;display:flex;flex-direction:column;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-shrink:0">
+          <h3 id="doc-viewer-title" style="font-size:15px;font-weight:600;color:var(--clr-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80%"></h3>
+          <button class="modal-close" id="doc-viewer-close">✕</button>
+        </div>
+        <div id="doc-viewer-body" style="flex:1;overflow:hidden;border-radius:8px;"></div>
+      </div>`;
+    document.body.appendChild(modal);
+    document.getElementById("doc-viewer-close").onclick = () => { modal.style.display = "none"; };
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.style.display = "none"; });
   }
-}
 
-// 8. Hàm bắt sự kiện khi kéo thả tệp tin vào vùng Dropzone
-function handleDrop(e) {
-  e.preventDefault();
-  const zone = document.getElementById('drop-zone');
-  const label = document.getElementById('file-label');
-  
-  if (zone) zone.classList.remove('over');
-  
-  const f = e.dataTransfer.files[0];
-  if (f && label) label.textContent = f.name;
-}
+  document.getElementById("doc-viewer-title").textContent = name;
+  const body = document.getElementById("doc-viewer-body");
+  const ext = (originalName || filename).split(".").pop().toLowerCase();
+  const fileUrl = `${API}/docs/file/${filename}`;
 
-// 9. Hàm xử lý lưu thông tin tài liệu mới vào mảng tĩnh
-function handleSave() {
-  const nameInput = document.getElementById('doc-name');
-  if (!nameInput) return;
-
-  const name = nameInput.value.trim();
-  if (!name) { 
-    alert('Vui lòng nhập tên tài liệu!'); 
-    return; 
+  if (ext === "pdf") {
+    body.innerHTML = `<iframe src="${fileUrl}" style="width:100%;height:100%;border:none;border-radius:8px;"></iframe>`;
+  } else {
+    body.innerHTML = `
+      <div style="text-align:center;padding:60px 20px;color:var(--clr-muted)">
+        <div style="font-size:56px;margin-bottom:16px">📄</div>
+        <p style="font-size:15px;margin-bottom:8px">Định dạng <strong>.${ext}</strong> không xem trực tiếp được.</p>
+        <p style="font-size:13px;margin-bottom:24px;color:var(--clr-muted)">Tải về máy để mở bằng ứng dụng phù hợp.</p>
+        <a href="${fileUrl}" download="${originalName || filename}" class="btn btn-primary">⬇ Tải về</a>
+      </div>`;
   }
-  
-  docs.push({
-    id: docs.length + 1,
-    author: 'Người dùng — ' + new Date().toLocaleDateString('vi-VN'), // Định dạng ngày Việt Nam DD/MM/YYYY
-    title: name,
-    univ: '—',
-    field: 'Tài liệu cá nhân',
-    interest: 0,
-    tags: ['Mới lưu'],
-    saved: false
-  });
-  
-  // Cập nhật lại danh sách hiển thị
-  renderList(docs);
-  
-  // Reset sạch các ô nhập liệu sau khi lưu thành công
-  nameInput.value = '';
-  const label = document.getElementById('file-label');
-  const fileReal = document.getElementById('file-real');
-  if (label) label.textContent = '';
-  if (fileReal) fileReal.value = '';
+
+  modal.style.display = "flex";
 }
 
-// ==========================================================================
-// TỰ ĐỘNG CHẠY KHI TẢI TRANG & LẮNG NGHE SỰ KIỆN KHÁC
-// ==========================================================================
-
-// Bắt sự kiện nhấn Enter trên ô nhập dữ liệu tìm kiếm
-document.getElementById('search-q')?.addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') {
-    handleSearch();
-  }
-});
-// Hàm giả lập chức năng Đọc/Ghi tài liệu ngay trên giao diện web (Read/Write)
-function viewDocument(title) {
-  alert(`[Chức năng Đọc/Ghi]: Đang mở trình đọc nội dung cho tài liệu: "${title}". Bạn có thể viết ghi chú trực tiếp tại đây.`);
-}
-
-// Hàm giả lập gọi liên kết sang công cụ AI của Huy (Phân tích, check đạo văn, APA)
 function analyzeDoc(title) {
-  alert(`[Kích hoạt AI]: Đang gửi dữ liệu "${title}" sang hệ thống AI của Huy để kiểm tra đạo văn và trích xuất chuẩn APA...`);
+  alert(`Đang gửi "${title}" sang hệ thống AI để kiểm tra...`);
 }
 
-// Tự động kích hoạt hiển thị danh sách tài liệu lần đầu tiên khi tải trang
-renderList(docs) ;
+// Init
+document.getElementById("search-q")?.addEventListener("keypress", function (e) {
+  if (e.key === "Enter") handleSearch();
+});
+
+loadDocs();

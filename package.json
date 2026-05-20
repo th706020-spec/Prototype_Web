@@ -2,9 +2,11 @@
   "name": "prototype_web",
   "version": "1.0.0",
   "description": "Current Structure\r    Protocol_Project/\r    ├── index.html          ← Main homepage\r    ├── css/\r    │   └── style.css       ← Reusable CSS (Style)\r    ├── js/ \r    │   └── nav.js          ← Reusable Stuffs\r    └── pages/\r        ├── documents.html  ← Sub page\r        ├── forum.html      ← Sub page\r        └── connects.html   ← Sub page",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"No tests configured\" && exit 0"
   },
   "repository": {
     "type": "git",
@@ -19,8 +21,12 @@
   },
   "homepage": "https://github.com/th706020-spec/Prototype_Web#readme",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
     "sqlite3": "^6.0.1"
   }
 }

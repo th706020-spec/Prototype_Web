@@ -3,95 +3,56 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SmartStudy - Cộng đồng Học tập</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>Forum — Protocol</title>
+    <link rel="stylesheet" href="../../css/style.css" />
     <link rel="stylesheet" href="stylef.css" />
   </head>
-  <body class="bg-gray-50 dark:bg-[#151521]">
-    <div class="max-w-4xl mx-auto h-[calc(100vh-100px)] flex flex-col pt-10">
-      <header class="flex flex-col gap-4 mb-6 px-4">
-        <div class="flex justify-between items-center">
-          <div>
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-              Cộng đồng Học tập
-            </h2>
-            <p class="text-gray-500 dark:text-gray-400">
-              Trao đổi dành riêng cho thành viên đã đăng ký
-            </p>
-          </div>
-          <button
-            id="btn-open-modal"
-            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg transition-transform active:scale-95"
-          >
-            <i data-lucide="plus" class="w-5 h-5"></i> Bài viết mới
-          </button>
-        </div>
-        <div
-          class="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2"
-          id="tags-container"
-        ></div>
-      </header>
+  <body>
+    <div id="site-nav"></div>
 
-      <div
-        id="posts-container"
-        class="flex-1 overflow-y-auto custom-scrollbar space-y-4 pb-10 px-4"
-      ></div>
+    <div class="forum-root">
+      <a class="back-link" href="../../index.html">← Trang chủ</a>
+
+      <div class="forum-hero">
+        <div class="forum-hero-top">
+          <div>
+            <h2 class="forum-title">Cộng đồng Học tập</h2>
+            <p class="forum-sub">Trao đổi dành riêng cho thành viên đã đăng ký</p>
+          </div>
+          <button id="btn-open-modal" class="btn btn-primary">+ Bài viết mới</button>
+        </div>
+        <div id="tags-container" class="forum-tags"></div>
+      </div>
+
+      <div id="posts-container"></div>
     </div>
 
-    <div
-      id="create-modal"
-      class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm"
-    >
-      <div
-        class="bg-white dark:bg-[#28292c] w-full max-w-lg rounded-2xl shadow-2xl p-6 relative"
-      >
-        <button
-          id="btn-close-modal"
-          class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-        >
-          <i data-lucide="x" class="w-6 h-6"></i>
-        </button>
-        <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">
-          Tạo bài viết mới
-        </h3>
-        <div class="space-y-4">
-          <input
-            type="text"
-            id="post-title"
-            placeholder="Tiêu đề bài viết"
-            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#3c4043] text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <textarea
-            id="post-content"
-            placeholder="Nội dung chia sẻ..."
-            rows="5"
-            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#3c4043] text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-          ></textarea>
-          <input
-            type="text"
-            id="post-tags"
-            placeholder="Tags (cách nhau bởi dấu phẩy): Hỏi đáp, Tips..."
-            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#3c4043] text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <div class="flex justify-end gap-2 pt-2">
-            <button
-              id="btn-cancel-modal"
-              class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg font-medium"
-            >
-              Hủy
-            </button>
-            <button
-              id="btn-submit-post"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-            >
-              Đăng bài
-            </button>
+    <!-- Create post modal -->
+    <div id="create-modal" class="modal-overlay" style="display:none">
+      <div class="modal-box">
+        <button class="modal-close" id="btn-close-modal">✕</button>
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:20px;color:var(--clr-text)">Tạo bài viết mới</h3>
+        <div class="auth-form">
+          <div class="auth-field">
+            <input type="text" id="post-title" class="auth-input" placeholder="Tiêu đề bài viết" />
+          </div>
+          <div class="auth-field">
+            <textarea id="post-content" class="auth-input" placeholder="Nội dung chia sẻ..." rows="5" style="resize:vertical;min-height:120px"></textarea>
+          </div>
+          <div class="auth-field">
+            <input type="text" id="post-tags" class="auth-input" placeholder="Tags (phân cách bởi dấu phẩy): Hỏi đáp, Tips..." />
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+            <button id="btn-cancel-modal" class="btn btn-outline">Hủy</button>
+            <button id="btn-submit-post" class="btn btn-primary">Đăng bài</button>
           </div>
         </div>
       </div>
     </div>
 
+    <script src="../../js/config.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/nav.js"></script>
     <script src="navf.js"></script>
   </body>
 </html>

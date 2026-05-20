@@ -1,7 +1,12 @@
 const FORUM_KEY = "smartstudy_forum_posts_v2";
+
+// Use logged-in user if available
+const _authUser = window.Auth ? window.Auth.getUser() : null;
 const currentUser = {
-  username: "Trung",
-  avatar: "https://ui-avatars.com/api/?name=Trung",
+  username: _authUser ? _authUser.username : "Khách",
+  avatar: _authUser
+    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(_authUser.username)}&background=5b85f6&color=fff`
+    : "https://ui-avatars.com/api/?name=Guest&background=aaa&color=fff",
 };
 
 let posts = [];
@@ -10,55 +15,45 @@ let expandedPostId = null;
 
 const forumService = {
   getPosts: () => {
-    const data = localStorage.getItem(FORUM_KEY);
-    if (!data) {
-      localStorage.setItem(FORUM_KEY, JSON.stringify([]));
+    try {
+      const data = localStorage.getItem(FORUM_KEY);
+      if (!data) { localStorage.setItem(FORUM_KEY, JSON.stringify([])); return []; }
+      return JSON.parse(data);
+    } catch {
+      localStorage.removeItem(FORUM_KEY);
       return [];
     }
-    return JSON.parse(data);
   },
   createPost: (post) => {
-    const currentPosts = forumService.getPosts();
-    const newPosts = [post, ...currentPosts];
-    localStorage.setItem(FORUM_KEY, JSON.stringify(newPosts));
-    return newPosts;
+    const updated = [post, ...forumService.getPosts()];
+    localStorage.setItem(FORUM_KEY, JSON.stringify(updated));
+    return updated;
   },
   addComment: (postId, comment) => {
-    const currentPosts = forumService.getPosts();
-    const updatedPosts = currentPosts.map((p) => {
-      if (p.id === postId) {
-        return { ...p, comments: [...(p.comments || []), comment] };
-      }
-      return p;
-    });
-    localStorage.setItem(FORUM_KEY, JSON.stringify(updatedPosts));
-    return updatedPosts;
+    const updated = forumService.getPosts().map((p) =>
+      p.id === postId ? { ...p, comments: [...(p.comments || []), comment] } : p
+    );
+    localStorage.setItem(FORUM_KEY, JSON.stringify(updated));
+    return updated;
   },
   toggleLike: (postId, username) => {
-    const currentPosts = forumService.getPosts();
-    const updatedPosts = currentPosts.map((p) => {
-      if (p.id === postId) {
-        const currentLikes = p.likes || [];
-        const hasLiked = currentLikes.includes(username);
-        const newLikes = hasLiked
-          ? currentLikes.filter((u) => u !== username)
-          : [...currentLikes, username];
-        return { ...p, likes: newLikes };
-      }
-      return p;
+    const updated = forumService.getPosts().map((p) => {
+      if (p.id !== postId) return p;
+      const likes = p.likes || [];
+      return { ...p, likes: likes.includes(username) ? likes.filter((u) => u !== username) : [...likes, username] };
     });
-    localStorage.setItem(FORUM_KEY, JSON.stringify(updatedPosts));
-    return updatedPosts;
+    localStorage.setItem(FORUM_KEY, JSON.stringify(updated));
+    return updated;
   },
 };
 
-const tagsContainer = document.getElementById("tags-container");
-const postsContainer = document.getElementById("posts-container");
-const createModal = document.getElementById("create-modal");
-const btnOpenModal = document.getElementById("btn-open-modal");
-const btnCloseModal = document.getElementById("btn-close-modal");
-const btnCancelModal = document.getElementById("btn-cancel-modal");
-const btnSubmitPost = document.getElementById("btn-submit-post");
+const tagsContainer   = document.getElementById("tags-container");
+const postsContainer  = document.getElementById("posts-container");
+const createModal     = document.getElementById("create-modal");
+const btnOpenModal    = document.getElementById("btn-open-modal");
+const btnCloseModal   = document.getElementById("btn-close-modal");
+const btnCancelModal  = document.getElementById("btn-cancel-modal");
+const btnSubmitPost   = document.getElementById("btn-submit-post");
 
 function init() {
   posts = forumService.getPosts();
@@ -68,43 +63,21 @@ function init() {
 }
 
 function renderTags() {
-  const tagCounts = posts
-    .flatMap((p) => p.tags)
-    .reduce((acc, tag) => {
-      acc[tag] = (acc[tag] || 0) + 1;
-      return acc;
-    }, {});
+  const tagCounts = posts.flatMap((p) => p.tags).reduce((acc, tag) => {
+    acc[tag] = (acc[tag] || 0) + 1;
+    return acc;
+  }, {});
+  const sorted = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a]);
 
-  const sortedTags = Object.keys(tagCounts).sort(
-    (a, b) => tagCounts[b] - tagCounts[a],
-  );
-
-  let tagsHTML = `
-        <div class="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 mr-2">
-            <i data-lucide="filter" class="w-4 h-4"></i> Chủ đề:
-        </div>
-        <button onclick="handleTagClick(null)" class="px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-          selectedTag === null
-            ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
-            : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-[#1e1e2d] dark:border-gray-700 dark:text-gray-300"
-        }">Tất cả</button>
-    `;
-
-  sortedTags.forEach((tag) => {
-    const isActive = selectedTag === tag;
-    tagsHTML += `
-            <button onclick="handleTagClick('${tag}')" class="px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${
-              isActive
-                ? "bg-indigo-600 text-white border border-indigo-600"
-                : "bg-white border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600 dark:bg-[#1e1e2d] dark:border-gray-700 dark:text-gray-300 dark:hover:border-indigo-500"
-            }">
-                <i data-lucide="hash" class="w-3 h-3 opacity-60"></i> ${tag}
-            </button>
-        `;
-  });
-
-  tagsContainer.innerHTML = tagsHTML;
-  lucide.createIcons();
+  tagsContainer.innerHTML =
+    `<span class="tag-filter-label">🏷 Chủ đề:</span>
+     <button onclick="handleTagClick(null)" class="tag-filter ${selectedTag === null ? "all-active" : ""}">Tất cả</button>` +
+    sorted
+      .map(
+        (tag) =>
+          `<button onclick="handleTagClick('${tag}')" class="tag-filter ${selectedTag === tag ? "active" : ""}">${tag}</button>`
+      )
+      .join("");
 }
 
 window.handleTagClick = (tag) => {
@@ -126,191 +99,146 @@ window.handleLike = (postId, event) => {
 
 window.submitComment = (postId) => {
   const input = document.getElementById(`comment-input-${postId}`);
-  const commentText = input.value.trim();
-  if (!commentText) return;
-
+  const text = input ? input.value.trim() : "";
+  if (!text) return;
   posts = forumService.addComment(postId, {
     id: Date.now().toString(),
     author: currentUser.username,
     authorAvatar: currentUser.avatar,
-    content: commentText,
+    content: text,
     createdAt: new Date().toISOString(),
   });
   renderPosts();
 };
 
 window.handleCommentKeyPress = (event, postId) => {
-  if (event.key === "Enter") {
-    submitComment(postId);
-  }
+  if (event.key === "Enter") submitComment(postId);
 };
 
-function renderPosts() {
-  const filteredPosts = selectedTag
-    ? posts.filter((p) => p.tags.includes(selectedTag))
-    : posts;
+function avatarUrl(name) {
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "?")}&background=random`;
+}
 
-  if (filteredPosts.length === 0) {
+function renderPosts() {
+  const filtered = selectedTag ? posts.filter((p) => p.tags.includes(selectedTag)) : posts;
+
+  if (!filtered.length) {
     postsContainer.innerHTML = `
-            <div class="text-center py-20">
-                <div class="bg-gray-100 dark:bg-gray-800 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i data-lucide="search" class="w-10 h-10 text-gray-400"></i>
-                </div>
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Không tìm thấy bài viết nào</h3>
-                <p class="text-gray-500 dark:text-gray-400">Hãy thử chọn chủ đề khác hoặc tạo bài viết mới.</p>
-                <button onclick="handleTagClick(null)" class="mt-4 text-indigo-600 font-medium hover:underline">Xem tất cả</button>
-            </div>
-        `;
-    lucide.createIcons();
+      <div class="forum-empty">
+        <div class="forum-empty-icon">🔍</div>
+        <h3>Không tìm thấy bài viết nào</h3>
+        <p>Hãy thử chọn chủ đề khác hoặc tạo bài viết mới.</p>
+        <button onclick="handleTagClick(null)" class="btn btn-outline" style="margin-top:14px">Xem tất cả</button>
+      </div>`;
     return;
   }
 
-  let postsHTML = "";
-  filteredPosts.forEach((post) => {
-    const isExpanded = expandedPostId === post.id;
-    const hasLiked = (post.likes || []).includes(currentUser.username);
-    const contentDisplay = isExpanded
-      ? post.content
-      : post.content.length > 150
-        ? post.content.substring(0, 150) + "..."
-        : post.content;
+  postsContainer.innerHTML = filtered
+    .map((post) => {
+      const isExpanded  = expandedPostId === post.id;
+      const hasLiked    = (post.likes || []).includes(currentUser.username);
+      const displayText = isExpanded || post.content.length <= 150
+        ? post.content
+        : post.content.substring(0, 150) + "…";
 
-    let tagsHTML = post.tags
-      .map(
-        (tag) => `
-            <button onclick="event.stopPropagation(); handleTagClick('${tag}')" class="text-xs px-2 py-1 rounded-full flex items-center gap-1 transition-colors ${
-              selectedTag === tag
-                ? "bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-            }">
-                <i data-lucide="tag" class="w-3 h-3"></i> ${tag}
-            </button>
-        `,
-      )
-      .join("");
+      const tagsHTML = post.tags
+        .map(
+          (tag) =>
+            `<button onclick="event.stopPropagation();handleTagClick('${tag}')" class="post-tag ${selectedTag === tag ? "active-tag" : ""}">${tag}</button>`
+        )
+        .join("");
 
-    let commentsHTML = "";
-    if (isExpanded) {
-      let commentsList = "";
-      if (!post.comments || post.comments.length === 0) {
-        commentsList = `<p class="text-center text-gray-400 text-sm italic">Chưa có bình luận nào. Hãy là người đầu tiên!</p>`;
-      } else {
-        commentsList = post.comments
-          .map(
-            (comment) => `
-                    <div class="flex gap-3">
-                        <img src="${comment.authorAvatar}" class="w-8 h-8 rounded-full border border-gray-200" alt="avt">
-                        <div class="flex-1 bg-white dark:bg-[#1e1e2d] p-3 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-                            <div class="flex justify-between items-center mb-1">
-                                <div class="flex items-center gap-1">
-                                    <span class="font-bold text-xs dark:text-white">${comment.author}</span>
-                                    <i data-lucide="check-circle-2" class="w-3 h-3 text-blue-500"></i>
-                                </div>
-                                <span class="text-[10px] text-gray-400">${new Date(comment.createdAt).toLocaleDateString()}</span>
-                            </div>
-                            <p class="text-sm text-gray-700 dark:text-gray-300">${comment.content}</p>
-                        </div>
-                    </div>
-                `,
-          )
-          .join("");
+      let commentsHTML = "";
+      if (isExpanded) {
+        const commentItems = (post.comments || []).length
+          ? (post.comments || [])
+              .map(
+                (c) => `
+              <div class="comment-item">
+                <img class="comment-avatar" src="${c.authorAvatar || avatarUrl(c.author)}" alt="${c.author}">
+                <div class="comment-bubble">
+                  <div class="comment-meta">
+                    <span class="comment-author">${c.author}</span>
+                    <span class="comment-time">${new Date(c.createdAt).toLocaleDateString("vi-VN")}</span>
+                  </div>
+                  <p class="comment-text">${c.content}</p>
+                </div>
+              </div>`
+              )
+              .join("")
+          : `<p style="text-align:center;color:var(--clr-muted);font-size:13px;font-style:italic;padding:8px 0">Chưa có bình luận nào. Hãy là người đầu tiên!</p>`;
+
+        commentsHTML = `
+          <div class="comments-section">
+            <div>${commentItems}</div>
+            <div class="comment-input-row">
+              <input type="text" id="comment-input-${post.id}" class="comment-input"
+                onkeydown="handleCommentKeyPress(event,'${post.id}')"
+                placeholder="Viết bình luận..." />
+              <button class="comment-send-btn" onclick="submitComment('${post.id}')">➤</button>
+            </div>
+          </div>`;
       }
 
-      commentsHTML = `
-                <div class="bg-gray-50 dark:bg-[#252536] p-6 border-t border-gray-200 dark:border-gray-700">
-                    <div class="space-y-4 mb-6">${commentsList}</div>
-                    <div class="flex gap-2">
-                        <input type="text" id="comment-input-${post.id}" onkeydown="handleCommentKeyPress(event, '${post.id}')" placeholder="Viết bình luận..." class="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#1e1e2d] focus:outline-none focus:border-indigo-500 text-gray-900 dark:text-white shadow-sm">
-                        <button onclick="submitComment('${post.id}')" class="bg-indigo-600 text-white p-2 rounded-lg hover:bg-indigo-700 shadow-sm">
-                            <i data-lucide="send" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-    }
-
-    postsHTML += `
-            <div class="bg-white dark:bg-[#1e1e2d] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden animate-in">
-                <div class="p-6">
-                    <div class="flex items-center gap-3 mb-4">
-                        <img src="${post.authorAvatar || `https://ui-avatars.com/api/?name=${post.author}`}" alt="avatar" class="w-10 h-10 rounded-full bg-gray-100 border border-gray-200">
-                        <div>
-                            <div class="flex items-center gap-1">
-                                <h3 class="font-bold text-gray-900 dark:text-white text-sm">${post.author}</h3>
-                                <i data-lucide="check-circle-2" class="w-3 h-3 text-blue-500"></i>
-                            </div>
-                            <span class="text-xs text-gray-500">${new Date(post.createdAt).toLocaleDateString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</span>
-                        </div>
-                    </div>
-                    <h2 onclick="toggleExpandPost('${post.id}')" class="text-xl font-bold text-gray-800 dark:text-white mb-2 cursor-pointer hover:text-indigo-600 transition-colors">
-                        ${post.title}
-                    </h2>
-                    <p class="text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-wrap">${contentDisplay}</p>
-                    <div class="flex flex-wrap gap-2 mb-4">${tagsHTML}</div>
-                    <div class="flex items-center gap-6 border-t border-gray-100 dark:border-gray-700 pt-4">
-                        <button onclick="handleLike('${post.id}', event)" class="flex items-center gap-2 text-sm font-medium transition-colors ${hasLiked ? "text-pink-500" : "text-gray-500 hover:text-pink-500"}">
-                            <i data-lucide="heart" class="w-5 h-5 ${hasLiked ? "fill-current" : ""}"></i>
-                            ${(post.likes || []).length}
-                        </button>
-                        <button onclick="toggleExpandPost('${post.id}')" class="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-indigo-600 transition-colors">
-                            <i data-lucide="message-square" class="w-5 h-5"></i>
-                            ${(post.comments || []).length} Bình luận
-                        </button>
-                    </div>
-                </div>
-                ${commentsHTML}
+      return `
+        <div class="post-card animate-in">
+          <div class="post-card-body">
+            <div class="post-author">
+              <img class="post-author-avatar" src="${post.authorAvatar || avatarUrl(post.author)}" alt="${post.author}">
+              <div>
+                <div class="post-author-name">${post.author}</div>
+                <div class="post-author-time">${new Date(post.createdAt).toLocaleDateString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</div>
+              </div>
             </div>
-        `;
-  });
-
-  postsContainer.innerHTML = postsHTML;
-  lucide.createIcons();
+            <h2 class="post-title" onclick="toggleExpandPost('${post.id}')">${post.title}</h2>
+            <p class="post-content">${displayText}</p>
+            <div class="post-tags">${tagsHTML}</div>
+            <div class="post-actions">
+              <button class="post-action-btn ${hasLiked ? "liked" : ""}" onclick="handleLike('${post.id}',event)">
+                ♥ ${(post.likes || []).length}
+              </button>
+              <button class="post-action-btn" onclick="toggleExpandPost('${post.id}')">
+                💬 ${(post.comments || []).length} Bình luận
+              </button>
+            </div>
+          </div>
+          ${commentsHTML}
+        </div>`;
+    })
+    .join("");
 }
 
 function setupEventListeners() {
-  btnOpenModal.addEventListener("click", () => {
-    createModal.classList.remove("hidden");
-    createModal.classList.add("flex");
-  });
-
+  const openModal = () => { createModal.style.display = "flex"; };
   const closeModal = () => {
-    createModal.classList.add("hidden");
-    createModal.classList.remove("flex");
+    createModal.style.display = "none";
     document.getElementById("post-title").value = "";
     document.getElementById("post-content").value = "";
     document.getElementById("post-tags").value = "";
   };
 
+  btnOpenModal.addEventListener("click", openModal);
   btnCloseModal.addEventListener("click", closeModal);
   btnCancelModal.addEventListener("click", closeModal);
-
-  createModal.addEventListener("click", (e) => {
-    if (e.target === createModal) closeModal();
-  });
+  createModal.addEventListener("click", (e) => { if (e.target === createModal) closeModal(); });
 
   btnSubmitPost.addEventListener("click", () => {
-    const title = document.getElementById("post-title").value;
-    const content = document.getElementById("post-content").value;
-    const tagsInput = document.getElementById("post-tags").value;
-
+    const title   = document.getElementById("post-title").value.trim();
+    const content = document.getElementById("post-content").value.trim();
+    const tags    = document.getElementById("post-tags").value;
     if (!title || !content) return;
 
-    const post = {
+    posts = forumService.createPost({
       id: Date.now().toString(),
       author: currentUser.username,
       authorAvatar: currentUser.avatar,
-      title: title,
-      content: content,
-      tags: tagsInput
-        .split(",")
-        .map((t) => t.trim())
-        .filter((t) => t),
+      title,
+      content,
+      tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
       likes: [],
       comments: [],
       createdAt: new Date().toISOString(),
-    };
-
-    posts = forumService.createPost(post);
+    });
     closeModal();
     renderTags();
     renderPosts();
