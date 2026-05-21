@@ -47,8 +47,13 @@
 .card-title { font-size: 1.3rem; font-weight: 700; line-height: 1.3; margin-bottom: 8px; }
 .card-author { font-size: 0.9rem; color: var(--clr-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 .card-snippet { font-size: 1rem; color: #334155; line-height: 1.6; margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.full-text { display: block; overflow: visible; -webkit-line-clamp: unset; margin-bottom: 24px; font-size: 1.05rem; }
-
+.full-text { 
+    display: block; 
+    overflow: visible; 
+    -webkit-line-clamp: unset; 
+    line-clamp: unset; /* Thêm dòng này để chuẩn hóa */
+    margin-bottom: 24px; 
+}
 .card-image { max-width: 100%; border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--clr-border); max-height: 500px; object-fit: cover; }
 .file-attachment { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; background: #f8fafc; border: 1px solid var(--clr-border); border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: var(--clr-primary); margin-bottom: 16px;}
 
