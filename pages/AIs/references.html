@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reference Generator — Protocol</title>
+  <link rel="stylesheet" href="../../css/style.css" />
+  <link rel="stylesheet" href="./ais.css" />
+</head>
+<body>
+
+  <div id="site-nav"></div>
+
+  <main class="ai-container">
+    <div class="ai-page-header">
+      <div>
+        <h1>Reference Generator</h1>
+        <p class="ai-inline-note">Generate IEEE and APA citations from DOI/URL or raw source input.</p>
+      </div>
+      <div class="ai-links">
+        <a class="btn btn-outline" href="index.html">AI Home</a>
+        <a class="btn btn-outline" href="../../index.html">Site Home</a>
+      </div>
+    </div>
+
+    <details class="ai-settings">
+      <summary>API Settings</summary>
+      <form id="references-settings" class="ai-form">
+        <div class="ai-field">
+          <label class="ai-label" for="references-endpoint">References API endpoint</label>
+          <input id="references-endpoint" class="ai-input" data-setting="referencesEndpoint" placeholder="https://api.example.com/references/generate" />
+        </div>
+      </form>
+    </details>
+
+    <section class="ai-panel">
+      <h2>Source input</h2>
+      <form id="references-form" class="ai-form">
+        <div class="ai-field">
+          <label class="ai-label">Input type</label>
+          <div class="ai-select-wrapper" data-select>
+            <button class="ai-select-trigger" type="button" data-select-trigger aria-expanded="false">
+              <span data-select-label></span>
+              <span aria-hidden="true">▾</span>
+            </button>
+            <div class="ai-select-menu" data-select-menu>
+              <button class="ai-select-option" type="button" data-value="doi">DOI or URL</button>
+              <button class="ai-select-option" type="button" data-value="manual">Manual details</button>
+              <button class="ai-select-option" type="button" data-value="both">DOI + Manual details</button>
+            </div>
+            <select id="references-input-type" class="ai-select-native" aria-hidden="true">
+              <option value="doi">DOI or URL</option>
+              <option value="manual">Manual details</option>
+              <option value="both">DOI + Manual details</option>
+            </select>
+          </div>
+        </div>
+        <div class="ai-field ai-collapse" id="references-doi-section">
+          <label class="ai-label" for="references-doi">DOI or URL</label>
+          <input id="references-doi" class="ai-input" placeholder="10.1145/123456 or https://example.com" />
+        </div>
+        <div class="ai-field ai-collapse ai-hidden" id="references-text-section">
+          <label class="ai-label" for="references-text">Additional source details (optional)</label>
+          <textarea id="references-text" class="ai-textarea" placeholder="Author, title, year, publisher, etc."></textarea>
+        </div>
+        <div class="ai-actions">
+          <button class="btn btn-primary" type="submit" id="references-submit">Generate citations</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="references-panel" class="ai-panel ai-result-panel is-hidden">
+      <h2>Results</h2>
+      <div id="references-status" class="ai-status">Awaiting input.</div>
+      <div id="references-results" class="ai-columns ai-result">
+        <div>
+          <h3>IEEE</h3>
+          <div id="references-ieee" class="ai-output"></div>
+        </div>
+        <div>
+          <h3>APA</h3>
+          <div id="references-apa" class="ai-output"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="../../js/nav.js"></script>
+  <script src="./select-ui.js"></script>
+  <script>
+    (function () {
+      const select = document.getElementById('references-input-type');
+      const doiSection = document.getElementById('references-doi-section');
+      const textSection = document.getElementById('references-text-section');
+      if (!select || !doiSection || !textSection) {
+        return;
+      }
+      const apply = () => {
+        if (select.value === 'manual') {
+          doiSection.classList.add('ai-hidden');
+          textSection.classList.remove('ai-hidden');
+          return;
+        }
+        if (select.value === 'both') {
+          doiSection.classList.remove('ai-hidden');
+          textSection.classList.remove('ai-hidden');
+          return;
+        }
+        doiSection.classList.remove('ai-hidden');
+        textSection.classList.add('ai-hidden');
+      };
+      select.addEventListener('change', apply);
+      apply();
+    })();
+  </script>
+  <script type="module" src="./references.js"></script>
+
+</body>
+</html>

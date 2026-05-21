@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Tools — Protocol</title>
+  <link rel="stylesheet" href="../../css/style.css" />
+  <link rel="stylesheet" href="./ais.css" />
+</head>
+<body>
+
+  <div id="site-nav"></div>
+
+  <main class="ai-container">
+    <section class="ai-hero">
+      <h1>AI Tools</h1>
+      <p>
+        Prototype AI utilities for chat, plagiarism checks, reference generation, and file upload reading.
+        Each tool is wired for real APIs but can be configured later.
+      </p>
+    </section>
+
+    <section class="ai-grid" aria-label="AI tools list">
+      <a class="ai-card" href="chat.html">
+        <div class="ai-card-title">AI Chat</div>
+        <div class="ai-card-desc">Chat with an AI model. Configure Gemini or a custom endpoint.</div>
+      </a>
+
+      <a class="ai-card" href="plagiarism.html">
+        <div class="ai-card-title">Plagiarism Check</div>
+        <div class="ai-card-desc">Submit text or a file to an external plagiarism API.</div>
+      </a>
+
+      <a class="ai-card" href="references.html">
+        <div class="ai-card-title">Reference Generator</div>
+        <div class="ai-card-desc">Generate IEEE and APA citations from DOI/URL or input text.</div>
+      </a>
+
+      <a class="ai-card" href="upload.html">
+        <div class="ai-card-title">File Upload + Read</div>
+        <div class="ai-card-desc">Parse PDF/DOCX/TXT and prepare for cloud upload.</div>
+      </a>
+    </section>
+  </main>
+
+  <script src="../../js/nav.js"></script>
+
+</body>
+</html>

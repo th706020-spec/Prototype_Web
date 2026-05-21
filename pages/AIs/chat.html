@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Chat — Protocol</title>
+  <link rel="stylesheet" href="../../css/style.css" />
+  <link rel="stylesheet" href="./ais.css" />
+</head>
+<body class="ai-chat-body">
+
+  <div id="site-nav"></div>
+
+  <main class="ai-chat-page">
+    <div class="ai-chat-layout" id="chat-layout">
+      <aside class="ai-chat-sidebar">
+        <div class="ai-chat-sidebar-header">
+          <button class="btn btn-outline ai-chat-icon" type="button" id="chat-sidebar-toggle" aria-label="Toggle sidebar">☰</button>
+          <span class="ai-chat-sidebar-label">Chats</span>
+        </div>
+        <button class="btn btn-primary ai-chat-new" type="button" id="chat-new">New chat</button>
+        <div id="chat-history-list" class="ai-chat-history-list"></div>
+      </aside>
+
+      <section class="ai-chat-main">
+        <div class="ai-chat-topbar">
+          <div>
+            <h1>AI Chat</h1>
+            <p class="ai-inline-note">Configure Gemini or a custom chat endpoint before sending prompts.</p>
+          </div>
+          <div class="ai-links">
+            <a class="btn btn-outline" href="index.html">AI Home</a>
+            <a class="btn btn-outline" href="../../index.html">Site Home</a>
+          </div>
+        </div>
+
+        <details class="ai-settings">
+          <summary>API Settings</summary>
+          <form id="chat-settings" class="ai-form">
+            <div class="ai-field">
+              <label class="ai-label" for="chat-endpoint">Chat API endpoint (optional)</label>
+              <input id="chat-endpoint" class="ai-input" data-setting="chatEndpoint" placeholder="https://api.example.com/chat" />
+              <div class="ai-inline-note">If set, this endpoint is used instead of Gemini direct.</div>
+            </div>
+            <div class="ai-field">
+              <label class="ai-label" for="gemini-key">Gemini API key (optional)</label>
+              <input id="gemini-key" class="ai-input" data-setting="geminiApiKey" type="password" placeholder="AIza..." />
+            </div>
+            <div class="ai-field">
+              <label class="ai-label" for="gemini-model">Gemini model</label>
+              <input id="gemini-model" class="ai-input" data-setting="geminiModel" placeholder="gemini-1.5-flash" />
+            </div>
+            <div class="ai-field">
+              <label class="ai-label" for="gemini-base">Gemini API base</label>
+              <input id="gemini-base" class="ai-input" data-setting="geminiApiBase" placeholder="https://generativelanguage.googleapis.com/v1beta" />
+            </div>
+          </form>
+        </details>
+
+        <section class="ai-chat-shell" aria-label="Chat conversation">
+          <div class="ai-chat-window">
+            <div class="ai-chat-toolbar">
+              <span>Conversation</span>
+              <div id="chat-status" class="ai-status ai-status--compact">Ready.</div>
+            </div>
+            <div id="chat-history" class="ai-chat-history"></div>
+          </div>
+
+          <div class="ai-chat-composer">
+            <form id="chat-form" class="ai-chat-form">
+              <div class="ai-chat-input-row">
+                <textarea id="chat-input" class="ai-chat-input" placeholder="Send a message..." required></textarea>
+                <button class="btn btn-primary ai-chat-send" type="submit" id="chat-send" aria-label="Send message">➤</button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <script src="../../js/nav.js"></script>
+  <script>
+    (function () {
+      const body = document.body;
+      const layout = document.getElementById('chat-layout');
+      const toggle = document.getElementById('chat-sidebar-toggle');
+      const nav = document.querySelector('.navbar');
+      const navAuth = document.querySelector('.navbar-auth');
+      let hideTimer = null;
+      let lastScrollY = window.scrollY;
+
+      if (!layout || !toggle) {
+        return;
+      }
+      toggle.addEventListener('click', () => {
+        layout.classList.toggle('is-collapsed');
+      });
+
+      if (nav) {
+        const setNavHidden = (hidden) => {
+          nav.classList.toggle('is-hidden', hidden);
+          body.classList.toggle('nav-hidden', hidden);
+        };
+        const showNav = () => setNavHidden(false);
+        const scheduleHide = () => {
+          clearTimeout(hideTimer);
+          hideTimer = setTimeout(() => {
+            setNavHidden(true);
+          }, 3000);
+        };
+        showNav();
+        scheduleHide();
+
+        window.addEventListener('scroll', () => {
+          const current = window.scrollY;
+          if (current < lastScrollY) {
+            showNav();
+          }
+          scheduleHide();
+          lastScrollY = current;
+        });
+
+        window.addEventListener('mousemove', (event) => {
+          if (event.clientY <= 80) {
+            showNav();
+            scheduleHide();
+          }
+        });
+      }
+
+      if (navAuth) {
+        const themeButton = document.createElement('button');
+        themeButton.type = 'button';
+        themeButton.className = 'btn btn-outline ai-theme-toggle';
+        themeButton.textContent = 'Dark mode';
+        themeButton.addEventListener('click', () => {
+          body.classList.toggle('ai-theme-dark');
+          themeButton.textContent = body.classList.contains('ai-theme-dark') ? 'Light mode' : 'Dark mode';
+        });
+        navAuth.prepend(themeButton);
+      }
+    })();
+  </script>
+  <script type="module" src="./chat.js"></script>
+
+</body>
+</html>
