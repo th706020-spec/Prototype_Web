@@ -11,6 +11,7 @@
 
     <main>
       <section class="hero" aria-label="Search section">
+        <canvas id="donut-canvas" aria-hidden="true"></canvas>
         <span class="hero-label">Rau má &bull; Rau muống &bull; Rau dền</span>
 
         <h1 class="hero-title">
@@ -88,12 +89,12 @@
             <span class="card-arrow">Kết nối ngay hay cái gì đấy &rarr;</span>
           </a>
 
-          <div class="card card-disabled" aria-label="AI Tools — coming soon" style="opacity:0.55;cursor:not-allowed">
+          <a href="pages/AIs/" class="card" aria-label="AI Tools">
             <div class="card-icon" aria-hidden="true">🤖</div>
-            <div class="card-title">AI Tools <span style="font-size:0.7em;font-weight:400;color:var(--clr-muted)">(sắp ra mắt)</span></div>
-            <p class="card-desc">Công cụ AI hỗ trợ nghiên cứu sẽ có mặt tại đây</p>
-            <span class="card-arrow">Sắp ra mắt &rarr;</span>
-          </div>
+            <div class="card-title">AI Tools</div>
+            <p class="card-desc">Công cụ AI hỗ trợ nghiên cứu — kiểm tra đạo văn, tóm tắt, trích dẫn</p>
+            <span class="card-arrow">Dùng ngay &rarr;</span>
+          </a>
         </div>
       </section>
     </main>
@@ -103,5 +104,96 @@
     <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/nav.js"></script>
+
+    <script>
+    // ASCII Donut background
+    (function () {
+      const canvas = document.getElementById('donut-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      let A = 0, B = 0;
+      const CHAR_W = 8, CHAR_H = 13;
+
+      function resize() {
+        const hero = canvas.parentElement;
+        canvas.width = hero.offsetWidth;
+        canvas.height = hero.offsetHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      // Brighter luminance chars for more definition
+      const CHARS = ' .,;-+*=#@$';
+
+      function frame() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const isDark = document.body.classList.contains('dark');
+        ctx.fillStyle = isDark ? 'rgba(100,140,255,0.22)' : 'rgba(58,108,244,0.13)';
+        ctx.font = `bold ${CHAR_W + 2}px monospace`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+
+        const cols = Math.floor(W / CHAR_W);
+        const rows = Math.floor(H / CHAR_H);
+        const output = new Array(cols * rows).fill(' ');
+        const zbuf   = new Array(cols * rows).fill(0);
+
+        const sinA = Math.sin(A), cosA = Math.cos(A);
+        const sinB = Math.sin(B), cosB = Math.cos(B);
+
+        // K: pixel scale for projection — use min dimension so donut fits vertically
+        // Larger value = bigger donut
+        const K = Math.min(W, H) * 0.72;
+
+        // R2 = 2.5 (torus radius), R1 = 1.1 (tube radius) — makes it look more donut-like
+        for (let theta = 0; theta < 6.28; theta += 0.05) {
+          const sinT = Math.sin(theta), cosT = Math.cos(theta);
+          for (let phi = 0; phi < 6.28; phi += 0.015) {
+            const sinP = Math.sin(phi), cosP = Math.cos(phi);
+
+            // Torus point: R2=2.5, R1=1.1
+            const h  = cosT + 2.5; // R2 + R1*cosT
+            const D  = 1 / (sinP * h * sinA + sinT * cosA + 5);
+            const t  = sinP * h * cosA - sinT * sinA;
+
+            // Pixel-based projection (corrects character cell aspect ratio)
+            const xPx = cols / 2 + (K / CHAR_W) * D * (cosP * h * cosB - t * sinB);
+            const yPx = rows / 2 + (K / CHAR_H) * D * (cosP * h * sinB + t * cosB);
+
+            const x = Math.floor(xPx);
+            const y = Math.floor(yPx);
+            const o = x + cols * y;
+
+            const L = Math.floor(8 * ((sinT * sinA - sinP * cosT * cosA) * cosB -
+                          sinP * cosT * sinA - sinT * cosA - cosP * cosT * sinB));
+
+            if (y > 0 && y < rows && x > 0 && x < cols && D > zbuf[o]) {
+              zbuf[o] = D;
+              const idx = Math.max(0, Math.min(L, CHARS.length - 1));
+              output[o] = CHARS[idx] || '.';
+            }
+          }
+        }
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const ch = output[c + cols * r];
+            if (ch && ch !== ' ') {
+              ctx.fillText(ch, c * CHAR_W, r * CHAR_H);
+            }
+          }
+        }
+
+        A += 0.009;
+        B += 0.004;
+        requestAnimationFrame(frame);
+      }
+
+      frame();
+    })();
+    </script>
   </body>
 </html>

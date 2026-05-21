@@ -436,3 +436,103 @@
   color: var(--clr-text);
   margin: 0;
 }
+
+/* FILE LINK IN CHAT */
+.msg-file-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  text-decoration: underline;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.primary-bubble .msg-file-link {
+  color: #fff;
+}
+
+/* EMPTY STATE */
+.chat-empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--clr-muted);
+  text-align: center;
+  padding: 40px;
+}
+
+.chat-empty-icon {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.chat-empty-state h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--clr-text);
+  margin: 0;
+}
+
+.chat-empty-state p {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* FILE ATTACH BUTTON */
+.chat-file-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--clr-primary);
+  flex-shrink: 0;
+  transition: background-color var(--transition);
+}
+
+.chat-file-btn:hover {
+  background-color: var(--clr-bg);
+}
+
+.chat-file-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* SEND BUTTON (now a real button) */
+button.chat-send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--clr-primary);
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background-color var(--transition), transform 0.1s;
+}
+
+button.chat-send-btn:hover {
+  background: #2a57d6;
+  transform: scale(1.05);
+}
+
+button.chat-send-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Dark mode */
+body.dark .btn-premium { background-color: #1c1a0e; color: #f59e0b; }
+body.dark .btn-premium:hover { background-color: #2a2310; }
+.action-btn { text-decoration: none; }

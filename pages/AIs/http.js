@@ -4,7 +4,8 @@ const SETTINGS_KEY = 'ais-settings';
 
 export function loadSettings() {
   let stored = {};
-  const raw = sessionStorage.getItem(SETTINGS_KEY);
+  // Try localStorage first (persists across sessions), fall back to sessionStorage
+  const raw = localStorage.getItem(SETTINGS_KEY) || sessionStorage.getItem(SETTINGS_KEY);
   if (raw) {
     try {
       stored = JSON.parse(raw);
@@ -16,7 +17,8 @@ export function loadSettings() {
 }
 
 export function saveSettings(next) {
-  sessionStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+  sessionStorage.setItem(SETTINGS_KEY, JSON.stringify(next)); // keep compat
 }
 
 export function bindSettings(form) {

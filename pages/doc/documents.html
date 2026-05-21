@@ -4,105 +4,107 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Documents — Protocol</title>
-<link rel="stylesheet" href="../../css/style.css" />
-<link rel="stylesheet" href="../../css/documents.css" />
+  <link rel="stylesheet" href="../../css/style.css" />
+  <link rel="stylesheet" href="../../css/documents.css" />
 </head>
 <body>
 
   <div id="site-nav"></div>
 
   <div class="doc-root">
+    <main class="documents-container">
 
-  <main class="documents-container">
-    
-    <a class="back-link" href="../../index.html">
-    <i class="ti ti-arrow-left"></i> Trang chủ
-    </a>
+      <a class="back-link" href="../../index.html">
+        <i class="ti ti-arrow-left"></i> Trang chủ
+      </a>
 
-    <div class="doc-hero">
-      <h1 class="hero-title">
-        Documents 
-        <span class="hero-accent">✦</span>
-      </h1>
-      <p class="hero-sub">Lưu trữ, xử lý tài liệu (DOC) và tối ưu hóa công cụ tìm kiếm học thuật chuyên sâu.</p>
-      <div class="tags-row">
-        <span class="tag-label">Gợi ý tìm kiếm:</span>
-        <span class="tag" onclick="fillSearch('SEM')">SEM</span>
-        <span class="tag" onclick="fillSearch('PLS-SEM')">PLS-SEM</span>
-        <span class="tag" onclick="fillSearch('AI trong giáo dục')">AI trong giáo dục</span>
-        <span class="tag" onclick="fillSearch('Hành vi người tiêu dùng')">Hành vi người tiêu dùng</span>
+      <!-- Toolbar -->
+      <div class="doc-toolbar">
+        <div class="doc-toolbar-search">
+          <input id="search-q" type="search" placeholder="Search documents…" autocomplete="off">
+        </div>
+        <select id="type-filter" onchange="handleFilter()">
+          <option value="all">All Types</option>
+          <option value="Research Paper">Research Paper</option>
+          <option value="Thesis">Thesis</option>
+          <option value="Article">Article</option>
+          <option value="Report">Report</option>
+          <option value="General">General</option>
+        </select>
+        <input id="date-filter" type="date" onchange="handleFilter()" title="Filter by upload date">
+        <div class="view-toggle" role="group" aria-label="View mode">
+          <button class="view-btn active" id="btn-view-list"  onclick="setView('list')"    title="List view">☰</button>
+          <button class="view-btn"        id="btn-view-grid"  onclick="setView('grid')"    title="Grid view">⊞</button>
+          <button class="view-btn"        id="btn-view-compact" onclick="setView('compact')" title="Compact grid">⊟</button>
+        </div>
+        <button class="btn btn-primary btn-upload-open" onclick="openUpload()">＋ Upload</button>
+      </div>
+
+      <!-- Document list -->
+      <div class="list-card">
+        <div class="list-header">
+          <div class="list-title">Documents</div>
+          <span class="count-pill" id="count-pill">0 documents</span>
+        </div>
+        <div id="doc-list"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Upload Modal -->
+  <div id="upload-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 id="upload-modal-title">Upload Document</h2>
+        <button class="modal-close" onclick="closeUpload()" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="up-name">Document Title</label>
+          <input id="up-name" type="text" placeholder="Enter document title…">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="up-type">Document Type</label>
+            <select id="up-type">
+              <option value="General">General</option>
+              <option value="Research Paper">Research Paper</option>
+              <option value="Thesis">Thesis</option>
+              <option value="Article">Article</option>
+              <option value="Report">Report</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="up-univ">University / Institution</label>
+            <input id="up-univ" type="text" placeholder="e.g. VNU, MIT…">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="up-field">Field / Subject</label>
+          <input id="up-field" type="text" placeholder="e.g. Computer Science, Marketing…">
+        </div>
+        <div class="form-group">
+          <label>File</label>
+          <div class="drop-zone" id="drop-zone"
+            onclick="document.getElementById('file-real').click()"
+            ondragover="event.preventDefault();this.classList.add('over')"
+            ondragleave="this.classList.remove('over')"
+            ondrop="handleDrop(event)">
+            <span class="drop-icon">📤</span>
+            <div class="drop-title">Click or drag &amp; drop</div>
+            <div class="drop-sub">PDF, DOCX, TXT, SAV…</div>
+            <div class="file-name-display" id="file-label"></div>
+          </div>
+          <input type="file" id="file-real" style="display:none" accept=".pdf,.docx,.doc,.txt,.sav,.spss,.xlsx,.csv" onchange="handleFile(this)">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeUpload()">Cancel</button>
+        <button class="btn btn-primary" onclick="handleUploadSubmit()">Upload</button>
       </div>
     </div>
-
-    <div class="two-col">
-
-      <div class="doc-card">
-        <div class="card-section-label">
-          Research Search Engine (Standard)
-          <span class="mode-badge">Free Mode</span>
-        </div>
-
-        <input id="search-q" class="search-input" type="text" placeholder="Tìm kiếm tài liệu, bài nghiên cứu...">
-
-        <div class="chips">
-          <button class="chip" onclick="fillSearch('Cấu trúc nghiên cứu')">📚 Cấu trúc nghiên cứu</button>
-          <button class="chip" onclick="fillSearch('Viết theo từng bước')">📋 Viết theo từng bước</button>
-          <button class="chip" onclick="fillSearch('Phần mềm định lượng')">📊 Phần mềm định lượng</button>
-          <button class="chip" onclick="fillSearch('Phương pháp nghiên cứu')">📖 Phương pháp nghiên cứu</button>
-          <button class="chip" onclick="fillSearch('Mẹo viết học thuật')">💡 Mẹo viết học thuật</button>
-        </div>
-
-        <hr class="divider">
-
-        <div class="premium-box">
-          <div class="premium-header">
-            <span class="premium-title">👑 Premium Features</span>
-            <span class="pro-badge">PRO ONLY</span>
-          </div>
-          <div class="premium-grid">
-          <input class="premium-input" type="text" placeholder="Bộ lọc theo độ uy tín" disabled>
-          <input class="premium-input" type="text" placeholder="Số lượng quan tâm" disabled>
-          </div>
-          <div class="premium-grid">
-            <div class="pf">✨ Gợi ý bài bằng AI</div>
-            <div class="pf">♾️ Lưu không giới hạn</div>
-          </div>
-          <div class="pf" style="margin-top:8px">💎 Truy cập tài liệu học thuật chuyên sâu</div>
-        </div>
-
-        <button class="btn-blue" onclick="handleSearch()">Tìm kiếm dữ liệu</button>
-      </div>
-
-      <div class="doc-card">
-        <div class="card-section-label">Xử lý &amp; Lưu trữ tài liệu</div>
-
-        <input id="doc-name" class="doc-input" type="text" placeholder="Tên định danh tài liệu học thuật...">
-
-        <input type="file" id="file-real" style="display:none" accept=".pdf,.docx,.spss,.sav" onchange="handleFile(this)">
-        <div class="drop-zone" id="drop-zone"
-          onclick="document.getElementById('file-real').click()"
-          ondragover="event.preventDefault();this.classList.add('over')"
-          ondragleave="this.classList.remove('over')"
-          ondrop="handleDrop(event)">
-          <span class="drop-icon">📤</span>
-          <div class="drop-title">Kéo thả hoặc click chọn tệp tin học thuật</div>
-          <div class="drop-sub">Hỗ trợ định dạng cao cấp định lượng (.pdf, .docx, .spss)</div>
-          <div class="file-name-display" id="file-label"></div>
-        </div>
-
-        <button class="btn-green" onclick="handleSave()">Lưu vào kho tài liệu</button>
-      </div>
-    </div>
-
-    <div class="list-card">
-      <div class="list-header">
-        <div class="list-title">Tài liệu nổi bật dành cho bạn</div>
-        <span class="count-pill" id="count-pill">02 Tài liệu hệ thống</span>
-      </div>
-      <div id="doc-list"></div>
-    </div>
-
-  </main>
+  </div>
 
   <div id="site-footer"></div>
 

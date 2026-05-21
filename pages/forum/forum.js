@@ -1,47 +1,300 @@
 const SYSTEM_TAGS = ["Giải Đáp", "Học Thuật", "Xã Hội", "Đề Xuất"];
+const API = window.AppConfig.API;
+const POLLS_STORAGE_KEY = 'forum_polls';
+const PIN_STORAGE_KEY = 'forum_pin_states';
+const LEGACY_STORAGE_KEY = 'forumData';
+const AVATAR_CACHE_KEY = 'protocol_avatar_url';
 
-// HỆ THỐNG MOCK LOGIN (Tài khoản hiện tại)
-let isPremium = localStorage.getItem('isPremium') === 'true';
-let sysName = localStorage.getItem('sysName') || "Người dùng ẩn danh";
-let sysAvatar = localStorage.getItem('sysAvatar') || "https://i.imgur.com/K3aDE8W.png"; 
+function getAuthUser() {
+  return window.Auth ? window.Auth.getUser() : null;
+}
 
-let replyingToCommentId = null;
-let pendingVotes = {}; 
+function buildDefaultAvatar(name) {
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Người dùng ẩn danh')}&background=5b85f6&color=fff`;
+}
 
-// TẢI VÀ VÁ LỖI DỮ LIỆU CŨ TỪ LOCALSTORAGE
-let posts = JSON.parse(localStorage.getItem('forumData')) || [];
-posts = posts.map(p => {
-  let safeTags = p.tags || [];
-  safeTags = safeTags.filter(t => t !== "Trò Chuyện"); // Dọn dẹp tag cũ
+function getCurrentProfile() {
+  const user = getAuthUser();
+  const username = user?.username || "Người dùng ẩn danh";
+  const avatar = user?.avatar_url || localStorage.getItem(AVATAR_CACHE_KEY) || buildDefaultAvatar(username);
+  return {
+    user,
+    username,
+    avatar,
+    isPremium: user?.tier === 'premium'
+  };
+}
+
+function parseDateValue(value) {
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : Date.now();
+}
+
+function normalizeTags(tags) {
+  let safeTags = Array.isArray(tags) ? tags : [];
+  safeTags = safeTags.filter(t => t !== "Trò Chuyện");
   if (safeTags.length === 0) safeTags = ["Giải Đáp"];
+  return safeTags;
+}
+
+function getVoteStorageKey(postId) {
+  return `forum_votes_${postId}`;
+}
+
+function loadVoteState(postId) {
+  const value = localStorage.getItem(getVoteStorageKey(postId));
+  return value === 'up' || value === 'down' ? value : null;
+}
+
+function saveVoteState(postId, value) {
+  if (value === 'up' || value === 'down') localStorage.setItem(getVoteStorageKey(postId), value);
+  else localStorage.removeItem(getVoteStorageKey(postId));
+}
+
+function loadPinStates() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PIN_STORAGE_KEY) || '{}');
+    return raw && typeof raw === 'object' ? raw : {};
+  } catch {
+    return {};
+  }
+}
+
+function savePinStates(pinStates) {
+  localStorage.setItem(PIN_STORAGE_KEY, JSON.stringify(pinStates || {}));
+}
+
+function readPollStorage() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(POLLS_STORAGE_KEY) || '[]');
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeComment(comment) {
+  const authorName = comment.author_name || comment.author || "Ẩn danh";
+  return {
+    id: Number(comment.id) || Date.now(),
+    author: authorName,
+    authorAvatar: comment.author_avatar || comment.authorAvatar || buildDefaultAvatar(authorName),
+    text: comment.content || comment.text || "",
+    time: comment.created_at ? parseDateValue(comment.created_at) : (Number(comment.time) || Date.now()),
+    replyToId: comment.parent_comment_id ?? comment.replyToId ?? null
+  };
+}
+
+function normalizeLocalPollPost(post) {
+  const pinStates = loadPinStates();
+  const localPin = pinStates[post.id] || null;
+  const authorName = post.author || post.author_name || "Ẩn danh";
+  return {
+    ...post,
+    source: 'local-poll',
+    id: Number(post.id) || Date.now(),
+    author: authorName,
+    authorAvatar: post.authorAvatar || post.author_avatar || buildDefaultAvatar(authorName),
+    title: post.title || "Không có tiêu đề",
+    content: post.content || "",
+    upvotes: Number(post.upvotes) || 0,
+    downvotes: Number(post.downvotes) || 0,
+    comments: Array.isArray(post.comments) ? post.comments.map(normalizeComment) : [],
+    pollOptions: Array.isArray(post.pollOptions) ? post.pollOptions.filter(o => o) : [],
+    currentUserPollVote: post.currentUserPollVote !== undefined ? post.currentUserPollVote : null,
+    currentUserVote: loadVoteState(post.id) || post.currentUserVote || null,
+    tags: normalizeTags(post.tags),
+    privacy: post.privacy || 'public',
+    createdAt: Number(post.createdAt) || Date.now(),
+    lastActive: Number(post.lastActive) || Date.now(),
+    isPinned: localPin ? Boolean(localPin.isPinned) : Boolean(post.isPinned),
+    pinnedAt: localPin?.pinnedAt || post.pinnedAt || null,
+    fileData: post.fileData || null,
+    fileName: post.fileName || null,
+    fileType: post.fileType || null,
+    type: 'poll',
+    authorColor: post.authorColor || '#1c1e24',
+    isPremiumAuthor: Boolean(post.isPremiumAuthor),
+    threadLoaded: true
+  };
+}
+
+function loadPollPosts() {
+  return readPollStorage().map(normalizeLocalPollPost);
+}
+
+function savePollPosts() {
+  const localPolls = posts.filter(p => p.source === 'local-poll').map(p => ({
+    ...p,
+    comments: Array.isArray(p.comments) ? p.comments : []
+  }));
+  localStorage.setItem(POLLS_STORAGE_KEY, JSON.stringify(localPolls));
+}
+
+function migrateLegacyPolls() {
+  if (localStorage.getItem(POLLS_STORAGE_KEY)) return;
+
+  try {
+    const legacyPosts = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || '[]');
+    if (!Array.isArray(legacyPosts)) return;
+    const legacyPolls = legacyPosts.filter(p => p && p.type === 'poll').map(normalizeLocalPollPost);
+    if (legacyPolls.length) localStorage.setItem(POLLS_STORAGE_KEY, JSON.stringify(legacyPolls));
+  } catch {}
+}
+
+function normalizeServerPost(serverPost, existingPost = {}) {
+  const authorName = serverPost.author_name || existingPost.author || "Ẩn danh";
+  const pinStates = loadPinStates();
+  const localPin = pinStates[serverPost.id] || null;
+  const comments = Array.isArray(serverPost.comments)
+    ? serverPost.comments.map(normalizeComment)
+    : (Array.isArray(existingPost.comments) ? existingPost.comments : []);
 
   return {
-    ...p,
-    author: p.author || "Ẩn danh",
-    authorAvatar: p.authorAvatar || "https://i.imgur.com/K3aDE8W.png", 
-    title: p.title || "Không có tiêu đề",
-    upvotes: p.upvotes || 0,
-    downvotes: p.downvotes || 0,
-    comments: p.comments || [],
-    pollOptions: Array.isArray(p.pollOptions) ? p.pollOptions.filter(o => o) : [], // Bảo vệ crash mảng
-    currentUserPollVote: p.currentUserPollVote !== undefined ? p.currentUserPollVote : null,
-    tags: safeTags,
-    privacy: p.privacy || 'public',
-    createdAt: Number(p.createdAt) || Date.now(), // Bảo vệ crash khi sắp xếp
-    lastActive: Number(p.lastActive) || Date.now(),
-    isPinned: Boolean(p.isPinned)
+    ...existingPost,
+    id: Number(serverPost.id),
+    source: 'server',
+    author: authorName,
+    authorAvatar: serverPost.author_avatar || existingPost.authorAvatar || buildDefaultAvatar(authorName),
+    authorColor: existingPost.authorColor || '#1c1e24',
+    isPremiumAuthor: Boolean(existingPost.isPremiumAuthor),
+    privacy: existingPost.privacy || 'public',
+    title: serverPost.title || existingPost.title || "Không có tiêu đề",
+    content: serverPost.content || existingPost.content || "",
+    fileData: existingPost.fileData || null,
+    fileName: existingPost.fileName || null,
+    fileType: existingPost.fileType || null,
+    type: 'post',
+    tags: normalizeTags(serverPost.tags),
+    upvotes: Number(serverPost.upvotes) || 0,
+    downvotes: Number(serverPost.downvotes) || 0,
+    currentUserVote: loadVoteState(serverPost.id),
+    pollOptions: [],
+    currentUserPollVote: null,
+    comments,
+    createdAt: parseDateValue(serverPost.created_at || existingPost.createdAt),
+    lastActive: parseDateValue(serverPost.last_active || serverPost.created_at || existingPost.lastActive),
+    isPinned: localPin ? Boolean(localPin.isPinned) : Boolean(Number(serverPost.is_pinned)),
+    pinnedAt: localPin?.pinnedAt || existingPost.pinnedAt || null,
+    threadLoaded: Array.isArray(serverPost.comments) ? true : Boolean(existingPost.threadLoaded)
   };
-});
+}
 
-let activeFilterTags = [...SYSTEM_TAGS]; 
-let currentFilterType = 'all'; 
+function replacePost(updatedPost) {
+  const index = posts.findIndex(p => p.id === updatedPost.id);
+  if (index > -1) posts[index] = updatedPost;
+  else posts.unshift(updatedPost);
+}
 
+function getPostById(postId) {
+  return posts.find(p => p.id === postId);
+}
+
+async function fetchJSON(url, options = {}) {
+  const response = await fetch(url, options);
+  const text = await response.text();
+  let data = null;
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Server returned an unexpected response.");
+    }
+  }
+
+  if (!response.ok) throw new Error(data?.error || `Request failed (${response.status})`);
+  return data;
+}
+
+function getAuthHeaders(includeJson = true) {
+  const headers = {};
+  const token = window.Auth ? window.Auth.getToken() : null;
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (includeJson) headers['Content-Type'] = 'application/json';
+  return headers;
+}
+
+function promptLogin(message) {
+  alert(message);
+  const loginBtn = document.getElementById('open-login');
+  if (loginBtn) loginBtn.click();
+}
+
+function updateAvatarPreview(avatarUrl) {
+  sysAvatar = avatarUrl;
+  const preview = document.getElementById('sysAvatarPreview');
+  if (preview) preview.src = avatarUrl;
+  const navAvatar = document.getElementById('nav-avatar');
+  if (navAvatar) navAvatar.src = avatarUrl;
+}
+
+function persistPinState(post) {
+  if (post.source === 'local-poll') {
+    savePollPosts();
+    return;
+  }
+
+  const pinStates = loadPinStates();
+  if (post.isPinned) pinStates[post.id] = { isPinned: true, pinnedAt: post.pinnedAt || Date.now() };
+  else delete pinStates[post.id];
+  savePinStates(pinStates);
+}
+
+async function fetchPosts() {
+  const existingPostMap = new Map(posts.map(post => [post.id, post]));
+
+  try {
+    const serverPosts = await fetchJSON(`${API}/forum/posts`);
+    const mappedServerPosts = Array.isArray(serverPosts)
+      ? serverPosts.map(post => normalizeServerPost(post, existingPostMap.get(Number(post.id)) || {}))
+      : [];
+
+    posts = [...mappedServerPosts, ...loadPollPosts()];
+  } catch (error) {
+    console.error('Failed to load forum posts:', error);
+    posts = loadPollPosts();
+  }
+
+  return posts;
+}
+
+async function fetchPostDetails(postId) {
+  const post = getPostById(postId);
+  if (!post || post.source === 'local-poll') return post;
+
+  const data = await fetchJSON(`${API}/forum/posts/${postId}`);
+  const updatedPost = normalizeServerPost(data, post);
+  replacePost(updatedPost);
+  return updatedPost;
+}
+
+function syncProfileFromAuth() {
+  const profile = getCurrentProfile();
+  sysName = profile.username;
+  sysAvatar = profile.avatar;
+  isPremium = profile.isPremium;
+  return profile;
+}
+
+migrateLegacyPolls();
+
+const initialProfile = getCurrentProfile();
+let isPremium = initialProfile.isPremium;
+let sysName = initialProfile.username;
+let sysAvatar = initialProfile.avatar;
+let replyingToCommentId = null;
+let pendingVotes = {};
+let posts = loadPollPosts();
+let activeFilterTags = [...SYSTEM_TAGS];
+let currentFilterType = 'all';
 let uploadedFileData = null;
 let uploadedFileName = null;
 let uploadedFileType = null;
 let currentOpenPostId = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+
+document.addEventListener('DOMContentLoaded', async () => {
   const fileInput = document.getElementById('postFile');
   if(fileInput) {
     fileInput.addEventListener('change', function(e) {
@@ -61,54 +314,93 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadSystemProfile();
   initSystemTags();
-  renderPosts(); 
+  await fetchPosts();
+  await renderPosts(); 
 });
 
 // ================= HỆ THỐNG PROFILE =================
 function loadSystemProfile() {
-  document.getElementById('sysUserName').innerText = sysName;
-  document.getElementById('sysAvatarPreview').src = sysAvatar;
-  updatePremiumUI();
-}
+  const { user } = syncProfileFromAuth();
+  const nameEl = document.getElementById('sysUserName');
+  const avatarEl = document.getElementById('sysAvatarPreview');
+  const statusText = document.getElementById('premiumStatusText');
 
-function changeUserName() {
-  const newName = prompt("Nhập tên hiển thị mới của bạn:", sysName);
-  if (newName && newName.trim() !== "") {
-    sysName = newName.trim();
-    localStorage.setItem('sysName', sysName);
-    loadSystemProfile();
+  if (nameEl) nameEl.innerText = sysName;
+  if (avatarEl) avatarEl.src = sysAvatar;
+  if (statusText) statusText.innerText = user ? 'Tài khoản thường' : 'Chưa đăng nhập';
+  updatePremiumUI();
+
+  const token = window.Auth ? window.Auth.getToken() : null;
+  if (user && token) {
+    fetchJSON(`${API}/auth/me`, { headers: getAuthHeaders(false) })
+      .then(data => {
+        if (data?.user?.avatar_url) {
+          localStorage.setItem(AVATAR_CACHE_KEY, data.user.avatar_url);
+          updateAvatarPreview(data.user.avatar_url);
+        }
+      })
+      .catch(() => {});
   }
 }
 
-function updateSystemAvatar(event) {
-  const file = event.target.files[0];
+function changeUserName() {
+  alert("Tên hiển thị được quản lý bởi hệ thống tài khoản. Vui lòng cập nhật trong hồ sơ của bạn.");
+}
+
+async function updateSystemAvatar(event) {
+  const file = event?.target?.files?.[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) { 
-    sysAvatar = e.target.result;
-    localStorage.setItem('sysAvatar', sysAvatar);
-    loadSystemProfile();
-  };
-  reader.readAsDataURL(file);
+
+  if (!getAuthUser()) {
+    promptLogin("Vui lòng đăng nhập để cập nhật avatar.");
+    event.target.value = '';
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const data = await fetchJSON(`${API}/auth/avatar`, {
+      method: 'POST',
+      headers: getAuthHeaders(false),
+      body: formData
+    });
+
+    if (data?.avatar_url) {
+      localStorage.setItem(AVATAR_CACHE_KEY, data.avatar_url);
+      updateAvatarPreview(data.avatar_url);
+      loadSystemProfile();
+    }
+  } catch (error) {
+    alert("Lỗi: " + error.message);
+  } finally {
+    event.target.value = '';
+  }
 }
 
 function buyPremium() {
-  isPremium = true;
-  localStorage.setItem('isPremium', 'true');
-  updatePremiumUI();
-  if (currentOpenPostId) renderThreadView(); else renderPosts();
+  window.location.href = '../premium/premium.html';
 }
 
 function updatePremiumUI() {
   const statusText = document.getElementById('premiumStatusText');
   const btn = document.getElementById('buyPremiumBtn');
   const colorPicker = document.getElementById('premiumColorPickerSection');
-  if (isPremium && statusText && btn) {
+  const user = getAuthUser();
+  if (!statusText || !btn) return;
+
+  if (isPremium && user) {
     statusText.innerHTML = "<b> Tài khoản Premium</b>";
     statusText.style.color = "#a16207";
     btn.style.display = "none";
     if (colorPicker) colorPicker.style.display = "flex";
+    return;
   }
+
+  statusText.innerHTML = user ? 'Tài khoản thường' : 'Chưa đăng nhập';
+  statusText.style.color = '';
+  btn.style.display = user ? 'inline-flex' : 'none';
+  if (colorPicker) colorPicker.style.display = 'none';
 }
 
 // ================= TẠO BÀI & TAGS =================
@@ -127,7 +419,10 @@ function initSystemTags() {
   });
 }
 
-function openCreateModal() { document.getElementById('createPostModal').classList.add('active'); }
+function openCreateModal() {
+  if (!getAuthUser()) return promptLogin("Vui lòng đăng nhập để tạo bài đăng.");
+  document.getElementById('createPostModal').classList.add('active');
+}
 function closeCreateModal(force = false) {
   if (force === true || (event && event.target.id === 'createPostModal')) {
     document.getElementById('createPostModal').classList.remove('active');
@@ -142,13 +437,16 @@ function addPollInput() {
   container.appendChild(input);
 }
 
-function createPost() {
+async function createPost() {
+  if (!getAuthUser()) return promptLogin("Vui lòng đăng nhập để tạo bài đăng.");
+
   const title = document.getElementById('postTitle').value.trim();
   const content = document.getElementById('postContent').value.trim();
   const type = document.getElementById('postType').value;
   const privacy = document.getElementById('postPrivacy').value;
 
   if (!title) return alert("Vui lòng nhập tiêu đề!");
+  if (!content) return alert("Vui lòng nhập nội dung!");
   const selectedTags = Array.from(document.querySelectorAll('.post-tag-checkbox:checked')).map(cb => cb.value);
   if (selectedTags.length === 0) return alert("Bắt buộc phải chọn ít nhất 1 Tag!");
 
@@ -161,30 +459,45 @@ function createPost() {
 
   const nameColor = isPremium ? document.getElementById('postNameColor').value : '#1c1e24';
 
-  const newPost = {
-    id: Date.now(),
-    author: sysName, 
-    authorAvatar: sysAvatar, 
-    authorColor: nameColor, isPremiumAuthor: isPremium, privacy: privacy,
-    title: title, content: content,
-    fileData: uploadedFileData, fileName: uploadedFileName, fileType: uploadedFileType,
-    type: type, tags: selectedTags,
-    upvotes: 0, downvotes: 0, currentUserVote: null, 
-    pollOptions: pollOptions, currentUserPollVote: null, 
-    comments: [], 
-    createdAt: Date.now(), lastActive: Date.now(), 
-    isPinned: false, pinnedAt: null 
-  };
+  try {
+    if (type === 'poll') {
+      const newPost = {
+        id: Date.now(),
+        source: 'local-poll',
+        author: sysName, 
+        authorAvatar: sysAvatar, 
+        authorColor: nameColor, isPremiumAuthor: isPremium, privacy: privacy,
+        title: title, content: content,
+        fileData: uploadedFileData, fileName: uploadedFileName, fileType: uploadedFileType,
+        type: type, tags: selectedTags,
+        upvotes: 0, downvotes: 0, currentUserVote: null, 
+        pollOptions: pollOptions, currentUserPollVote: null, 
+        comments: [], 
+        createdAt: Date.now(), lastActive: Date.now(), 
+        isPinned: false, pinnedAt: null,
+        threadLoaded: true
+      };
 
-  posts.unshift(newPost);
-  localStorage.setItem('forumData', JSON.stringify(posts));
-  
-  document.getElementById('postTitle').value = ''; document.getElementById('postContent').value = '';
-  document.getElementById('postFile').value = ''; uploadedFileData = null; uploadedFileName = null; uploadedFileType = null;
-  document.querySelectorAll('.post-tag-checkbox').forEach(cb => cb.checked = false);
-  
-  closeCreateModal(true);
-  filterOnly('all'); // Tự động reset về tab Tất cả bài khi đăng xong
+      posts.unshift(newPost);
+      savePollPosts();
+    } else {
+      await fetchJSON(`${API}/forum/posts`, {
+        method: 'POST',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({ title, content, tags: selectedTags })
+      });
+      await fetchPosts();
+    }
+    
+    document.getElementById('postTitle').value = ''; document.getElementById('postContent').value = '';
+    document.getElementById('postFile').value = ''; uploadedFileData = null; uploadedFileName = null; uploadedFileType = null;
+    document.querySelectorAll('.post-tag-checkbox').forEach(cb => cb.checked = false);
+    
+    closeCreateModal(true);
+    filterOnly('all'); // Tự động reset về tab Tất cả bài khi đăng xong
+  } catch (error) {
+    alert("Lỗi: " + error.message);
+  }
 }
 
 // ================= CƠ CHẾ KHẢO SÁT (POLL) =================
@@ -203,7 +516,7 @@ function confirmPollVote(postId) {
   post.lastActive = Date.now();
   
   delete pendingVotes[postId]; 
-  localStorage.setItem('forumData', JSON.stringify(posts));
+  savePollPosts();
   if (currentOpenPostId) renderThreadView(); else renderPosts();
 }
 
@@ -216,7 +529,7 @@ function resetPollVote(postId) {
   
   post.currentUserPollVote = null; 
   post.lastActive = Date.now();
-  localStorage.setItem('forumData', JSON.stringify(posts));
+  savePollPosts();
   if (currentOpenPostId) renderThreadView(); else renderPosts();
 }
 
@@ -302,34 +615,51 @@ function generatePostHTML(post, isThreadView = false) {
         <div class="action-group">
           <button class="vote-btn ${isUpvoted}" onclick="handleVote(${post.id}, 'up')">▲ ${post.upvotes}</button>
           <button class="vote-btn ${isDownvoted}" onclick="handleVote(${post.id}, 'down')">▼ ${post.downvotes}</button>
-          <button class="vote-btn"> ${commentCount}</button>
+          <button class="vote-btn ghost">💬 ${commentCount}</button>
         </div>
-        <button class="vote-btn" style="border:none;" onclick="togglePin(${post.id})">${post.isPinned ? 'Bỏ Ghim' : '📌 Ghim bài'}</button>
+        <button class="vote-btn ghost" onclick="togglePin(${post.id})">${post.isPinned ? '📌 Bỏ Ghim' : '📌 Ghim bài'}</button>
       </div>
     </div>
   `;
 }
 
-function submitComment() {
+async function submitComment() {
+  if (!getAuthUser()) return promptLogin("Vui lòng đăng nhập để bình luận.");
+
   const inputEl = document.getElementById('commentInput');
   const text = inputEl.value.trim();
   if (!text) return;
 
   const post = posts.find(p => p.id === currentOpenPostId);
+  if (!post) return;
   if (!Array.isArray(post.comments)) post.comments = [];
 
-  post.comments.push({
-    id: Date.now(),
-    author: sysName, 
-    authorAvatar: sysAvatar, 
-    text: text,
-    time: Date.now(),
-    replyToId: replyingToCommentId
-  });
-  
-  post.lastActive = Date.now();
-  localStorage.setItem('forumData', JSON.stringify(posts));
-  inputEl.value = ''; cancelReply(); renderThreadView(); 
+  try {
+    if (post.source === 'local-poll') {
+      post.comments.push({
+        id: Date.now(),
+        author: sysName, 
+        authorAvatar: sysAvatar, 
+        text: text,
+        time: Date.now(),
+        replyToId: replyingToCommentId
+      });
+      
+      post.lastActive = Date.now();
+      savePollPosts();
+    } else {
+      await fetchJSON(`${API}/forum/posts/${post.id}/comments`, {
+        method: 'POST',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({ content: text, parent_comment_id: replyingToCommentId || undefined })
+      });
+      await fetchPostDetails(post.id);
+    }
+
+    inputEl.value = ''; cancelReply(); renderThreadView(); 
+  } catch (error) {
+    alert("Lỗi: " + error.message);
+  }
 }
 
 function renderThreadView() {
@@ -419,26 +749,74 @@ function toggleFilterTag(tag) {
 }
 
 function checkExpirations() {
-  const now = Date.now(); let dataChanged = false;
+  const now = Date.now(); let dataChanged = false; let pollChanged = false; let pinChanged = false;
+  const pinStates = loadPinStates();
   posts.forEach(p => {
     if (p.isPinned && p.pinnedAt && (now - p.pinnedAt) / (1000 * 60 * 60 * 24) >= 7) { 
       p.isPinned = false; p.pinnedAt = null; dataChanged = true; 
+      if (p.source === 'local-poll') pollChanged = true;
+      else { delete pinStates[p.id]; pinChanged = true; }
     }
   });
-  if (dataChanged) localStorage.setItem('forumData', JSON.stringify(posts));
+  if (dataChanged) {
+    if (pollChanged) savePollPosts();
+    if (pinChanged) savePinStates(pinStates);
+  }
 }
 
-function handleVote(postId, voteType) {
+async function handleVote(postId, voteType) {
   const post = posts.find(p => p.id === postId);
-  if (post.currentUserVote === voteType) {
-    if (voteType === 'up') post.upvotes--; if (voteType === 'down') post.downvotes--;
-    post.currentUserVote = null;
-  } else {
-    if (post.currentUserVote === 'up') post.upvotes--; if (post.currentUserVote === 'down') post.downvotes--;
-    if (voteType === 'up') post.upvotes++; if (voteType === 'down') post.downvotes++;
-    post.currentUserVote = voteType;
+  if (!post) return;
+  if (!getAuthUser()) return promptLogin("Vui lòng đăng nhập để bình chọn.");
+
+  const previousVote = post.currentUserVote;
+
+  if (post.source === 'local-poll') {
+    if (post.currentUserVote === voteType) {
+      if (voteType === 'up') post.upvotes--; if (voteType === 'down') post.downvotes--;
+      post.currentUserVote = null;
+      saveVoteState(postId, null);
+    } else {
+      if (post.currentUserVote === 'up') post.upvotes--; if (post.currentUserVote === 'down') post.downvotes--;
+      if (voteType === 'up') post.upvotes++; if (voteType === 'down') post.downvotes++;
+      post.currentUserVote = voteType;
+      saveVoteState(postId, voteType);
+    }
+    post.lastActive = Date.now(); savePollPosts();
+    if (currentOpenPostId) renderThreadView(); else renderPosts();
+    return;
   }
-  post.lastActive = Date.now(); localStorage.setItem('forumData', JSON.stringify(posts));
+
+  if (previousVote === voteType) {
+    if (voteType === 'up') post.upvotes = Math.max(0, post.upvotes - 1);
+    if (voteType === 'down') post.downvotes = Math.max(0, post.downvotes - 1);
+    post.currentUserVote = null;
+    post.lastActive = Date.now();
+    saveVoteState(postId, null);
+    if (currentOpenPostId) renderThreadView(); else renderPosts();
+    return;
+  }
+
+  try {
+    const voteData = await fetchJSON(`${API}/forum/posts/${postId}/vote`, {
+      method: 'PUT',
+      headers: getAuthHeaders(true),
+      body: JSON.stringify({ direction: voteType })
+    });
+
+    post.upvotes = Number(voteData?.upvotes) || 0;
+    post.downvotes = Number(voteData?.downvotes) || 0;
+
+    if (previousVote === 'up' && voteType === 'down') post.upvotes = Math.max(0, post.upvotes - 1);
+    if (previousVote === 'down' && voteType === 'up') post.downvotes = Math.max(0, post.downvotes - 1);
+
+    post.currentUserVote = voteType;
+    post.lastActive = Date.now();
+    saveVoteState(postId, voteType);
+  } catch (error) {
+    alert("Lỗi: " + error.message);
+  }
+
   if (currentOpenPostId) renderThreadView(); else renderPosts();
 }
 
@@ -447,7 +825,7 @@ function togglePin(postId) {
   if (!targetPost.isPinned) {
     targetPost.isPinned = true; targetPost.pinnedAt = Date.now();
   } else { targetPost.isPinned = false; targetPost.pinnedAt = null; }
-  localStorage.setItem('forumData', JSON.stringify(posts));
+  persistPinState(targetPost);
   if (currentOpenPostId) renderThreadView(); else renderPosts();
 }
 
@@ -463,6 +841,12 @@ function openThread(event, postId) {
   document.getElementById('threadContainer').style.display = 'block';
   document.querySelector('.forum-layout').classList.add('thread-mode');
   cancelReply(); window.scrollTo({ top: 0, behavior: 'smooth' }); renderThreadView();
+
+  if (post.source !== 'local-poll' && !post.threadLoaded) {
+    fetchPostDetails(postId)
+      .then(() => { if (currentOpenPostId === postId) renderThreadView(); })
+      .catch(error => console.error('Failed to load thread:', error));
+  }
 }
 
 function closeThread() {
@@ -474,8 +858,9 @@ function closeThread() {
   renderPosts();
 }
 
-function renderPosts() {
+async function renderPosts() {
   if (currentOpenPostId) return; 
+  if (posts.length === 0) await fetchPosts();
   checkExpirations(); 
   const searchEl = document.getElementById('searchInput');
   const searchKey = searchEl ? searchEl.value.toLowerCase().trim() : '';

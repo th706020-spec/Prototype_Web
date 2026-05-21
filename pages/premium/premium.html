@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upgrade to Premium – Protocol</title>
+  <link rel="stylesheet" href="../../css/style.css" />
+  <link rel="stylesheet" href="premium.css" />
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="premium-page">
+
+    <div class="premium-hero">
+      <div class="premium-badge-label">⭐ PREMIUM</div>
+      <h1 class="premium-title">Unlock the full Protocol experience</h1>
+      <p class="premium-subtitle">Support the project and get exclusive features for researchers, students, and collaborators.</p>
+    </div>
+
+    <div class="premium-grid">
+      <!-- Features -->
+      <div class="premium-features-card">
+        <h2 class="premium-card-title">What you get</h2>
+        <ul class="premium-features-list">
+          <li><span class="feat-icon">🔓</span><div><strong>Locked post access</strong><p>Read and comment on premium-only forum posts.</p></div></li>
+          <li><span class="feat-icon">🎨</span><div><strong>Custom name colour</strong><p>Stand out with a personalised display colour in the forum.</p></div></li>
+          <li><span class="feat-icon">📂</span><div><strong>Unlimited document uploads</strong><p>Remove the upload cap and store as many documents as you need.</p></div></li>
+          <li><span class="feat-icon">🤖</span><div><strong>Priority AI access</strong><p>Faster responses and higher usage limits across all AI tools.</p></div></li>
+          <li><span class="feat-icon">📌</span><div><strong>Post pinning</strong><p>Pin your important forum posts to the top.</p></div></li>
+          <li><span class="feat-icon">🌟</span><div><strong>Premium badge</strong><p>Gold badge displayed next to your name everywhere.</p></div></li>
+        </ul>
+      </div>
+
+      <!-- Payment -->
+      <div class="premium-payment-card">
+        <div class="premium-price">
+          <span class="price-amount">Free</span>
+          <span class="price-label">for now — support us later</span>
+        </div>
+        <div class="premium-qr-wrapper">
+          <div class="premium-qr-placeholder">
+            <span class="qr-icon">📱</span>
+            <span class="qr-text">QR Code<br><small>Payment QR coming soon</small></span>
+          </div>
+        </div>
+        <p class="premium-payment-note">Scan to pay. After payment, click "Activate Premium" below and your account will be upgraded instantly.</p>
+        <button class="btn btn-primary premium-activate-btn" id="activate-premium-btn">⭐ Activate Premium</button>
+        <p class="premium-activate-msg" id="premium-activate-msg" hidden></p>
+        <p class="premium-already" id="premium-already" hidden>✅ You are already a Premium member!</p>
+      </div>
+    </div>
+
+    <div class="premium-compare">
+      <h2 class="premium-compare-title">Free vs Premium</h2>
+      <table class="compare-table">
+        <thead>
+          <tr><th>Feature</th><th>Free</th><th>⭐ Premium</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Forum access</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Premium posts</td><td>❌</td><td>✅</td></tr>
+          <tr><td>Custom name colour</td><td>❌</td><td>✅</td></tr>
+          <tr><td>Document uploads</td><td>Limited</td><td>Unlimited</td></tr>
+          <tr><td>AI tools</td><td>Standard</td><td>Priority</td></tr>
+          <tr><td>Post pinning</td><td>❌</td><td>✅</td></tr>
+          <tr><td>Premium badge</td><td>❌</td><td>✅</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="../../js/config.js"></script>
+  <script src="../../js/auth.js"></script>
+  <script src="../../js/nav.js"></script>
+  <script>
+    const API = window.AppConfig.API;
+
+    function updatePremiumPageState() {
+      const user = window.Auth && window.Auth.getUser();
+      const activateBtn = document.getElementById("activate-premium-btn");
+      const alreadyEl = document.getElementById("premium-already");
+      if (!user) {
+        if (activateBtn) activateBtn.disabled = false;
+        return;
+      }
+      if (user.tier === "premium") {
+        if (activateBtn) activateBtn.style.display = "none";
+        if (alreadyEl) alreadyEl.hidden = false;
+      }
+    }
+
+    const activateBtn = document.getElementById("activate-premium-btn");
+    if (activateBtn) {
+      activateBtn.addEventListener("click", async function () {
+        const user = window.Auth && window.Auth.getUser();
+        if (!user) { alert("Please log in first."); return; }
+        const msgEl = document.getElementById("premium-activate-msg");
+        activateBtn.disabled = true;
+        activateBtn.textContent = "Activating...";
+        try {
+          const token = window.Auth.getToken();
+          const res = await fetch(`${API}/auth/upgrade`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Failed");
+          window.Auth.saveToken(data.token);
+          msgEl.textContent = "🎉 Premium activated! Redirecting...";
+          msgEl.style.color = "#22c55e";
+          msgEl.hidden = false;
+          setTimeout(() => window.location.href = "../../index.html", 1500);
+        } catch (err) {
+          msgEl.textContent = err.message;
+          msgEl.style.color = "#dc2626";
+          msgEl.hidden = false;
+          activateBtn.disabled = false;
+          activateBtn.textContent = "⭐ Activate Premium";
+        }
+      });
+    }
+
+    updatePremiumPageState();
+  </script>
+</body>
+</html>

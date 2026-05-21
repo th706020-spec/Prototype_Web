@@ -107,18 +107,85 @@ img.comment-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: 
 .widget-item-meta { font-size: 0.8rem; color: var(--clr-muted); margin-top: 6px; }
 
 /* FORMS & BUTTONS */
-.forum-input { padding: 12px 16px; border: 1px solid var(--clr-border); border-radius: 8px; outline: none; font-size: 1rem; }
-.forum-input:focus { border-color: var(--clr-primary); }
-.small-input { padding: 8px 12px; font-size: 0.9rem; }
-.forum-btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
-.forum-btn.small { padding: 6px 14px; font-size: 0.85rem; }
-.forum-btn.primary { background: var(--clr-primary); color: white; }
-.forum-btn.primary:hover { background: #2a57d6; }
+.forum-input { padding: 12px 16px; border: 1px solid var(--clr-border); border-radius: 10px; outline: none; font-size: 1rem; font-family: inherit; background: var(--clr-surface); color: var(--clr-text); transition: border-color 0.2s, box-shadow 0.2s; }
+.forum-input:focus { border-color: var(--clr-primary); box-shadow: 0 0 0 3px rgba(58,108,244,.12); }
+.small-input { padding: 8px 12px; font-size: 0.875rem; }
+
+.forum-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: background 0.18s, border-color 0.18s, box-shadow 0.18s, transform 0.12s;
+  white-space: nowrap;
+  line-height: 1;
+}
+.forum-btn:active { transform: scale(0.97); }
+.forum-btn.small { padding: 6px 14px; font-size: 0.82rem; border-radius: 8px; }
+.forum-btn.primary { background: var(--clr-primary); color: #fff; border-color: var(--clr-primary); }
+.forum-btn.primary:hover { background: #2a57d6; border-color: #2a57d6; box-shadow: 0 4px 12px rgba(58,108,244,.3); }
 .forum-btn.outline { background: transparent; border-color: var(--clr-border); color: var(--clr-text); }
-.forum-btn.outline:hover { background: #f8fafc; }
-.tag-btn { padding: 6px 14px; border-radius: 99px; border: 1px solid var(--clr-border); background: var(--clr-surface); cursor: pointer; font-size: 0.85rem; }
+.forum-btn.outline:hover { background: var(--clr-card-hover); border-color: var(--clr-primary); color: var(--clr-primary); }
+.forum-btn.premium { background: #fef3c7; color: #92400e; border-color: #fbbf24; }
+.forum-btn.premium:hover { background: #fde68a; box-shadow: 0 4px 12px rgba(251,191,36,.3); }
+
+.tag-btn { padding: 6px 14px; border-radius: 99px; border: 1.5px solid var(--clr-border); background: var(--clr-surface); cursor: pointer; font-size: 0.82rem; font-family: inherit; transition: 0.18s; color: var(--clr-text); }
+.tag-btn:hover { border-color: var(--clr-primary); color: var(--clr-primary); }
 .tag-btn.active { background: var(--clr-primary); color: #fff; border-color: var(--clr-primary); }
-.vote-btn { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--clr-border); background: transparent; font-size: 0.85rem; cursor: pointer; }
+
+.vote-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--clr-border);
+  background: var(--clr-surface);
+  color: var(--clr-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+  white-space: nowrap;
+  line-height: 1;
+}
+.vote-btn:hover { background: var(--clr-card-hover); border-color: var(--clr-primary); color: var(--clr-text); }
 .vote-btn.active-up { background: #dcfce7; color: #166534; border-color: #22c55e; }
 .vote-btn.active-down { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
-.premium-badge { background: #fef08a; color: #854d0e; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #eab308; }
+.vote-btn.ghost { background: transparent; border-color: transparent; color: var(--clr-muted); }
+.vote-btn.ghost:hover { background: var(--clr-card-hover); border-color: var(--clr-border); color: var(--clr-text); }
+
+.premium-badge { background: #fef08a; color: #854d0e; font-size: 0.72rem; padding: 2px 8px; border-radius: 6px; font-weight: 700; border: 1px solid #eab308; letter-spacing: 0.02em; }
+
+/* DARK MODE */
+body.dark .card-snippet { color: var(--clr-muted); }
+body.dark .comment-text { color: var(--clr-muted); }
+body.dark .tag-badge { background: #1e293b; color: #94a3b8; }
+body.dark .tag-badge:hover { background: #1e3a5f; color: var(--clr-primary); }
+body.dark .search-input { background: #1e293b !important; color: var(--clr-text) !important; }
+body.dark .poll-option-row { background: #1e293b; }
+body.dark .poll-option-row.selected { background: #1e3a5f; }
+body.dark .poll-bar { background: #334155; }
+body.dark .file-attachment { background: #1e293b; }
+body.dark .comment-reply-snippet { background: #1e293b; }
+body.dark .reply-indicator { background: #1e3a5f; }
+body.dark .forum-btn.outline:hover { background: #1e293b; border-color: var(--clr-primary); color: var(--clr-primary); }
+body.dark .forum-btn.outline { border-color: #334155; color: var(--clr-text); }
+body.dark .vote-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
+body.dark .vote-btn:hover { background: #334155; border-color: var(--clr-primary); color: var(--clr-text); }
+body.dark .vote-btn.ghost { background: transparent; border-color: transparent; }
+body.dark .vote-btn.ghost:hover { background: #1e293b; border-color: #334155; }
+body.dark .forum-input { background: #1e293b; color: var(--clr-text); }
+body.dark .modal-content { background: #1e293b; }
+body.dark img.comment-avatar { background: #334155; border-color: #334155; }
+body.dark .vote-btn.active-up { background: rgba(34, 197, 94, 0.15); color: #4ade80; border-color: rgba(34, 197, 94, 0.4); }
+body.dark .vote-btn.active-down { background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.4); }
+body.dark .premium-badge { background: rgba(234, 179, 8, 0.15); color: #fde047; border-color: rgba(234, 179, 8, 0.3); }

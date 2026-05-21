@@ -16,9 +16,16 @@
       <h1>AI Tools</h1>
       <p>
         Prototype AI utilities for chat, plagiarism checks, reference generation, and file upload reading.
-        Each tool is wired for real APIs but can be configured later.
+        Each tool is wired for real APIs — configure your API key once below.
       </p>
+      <button class="btn btn-outline ai-settings-btn" id="open-ai-settings">&#9881; API Settings</button>
     </section>
+
+    <!-- Settings warning banner (shown if no API key set) -->
+    <div id="ai-settings-banner" class="ai-settings-banner" style="display:none">
+      <strong>No API key configured.</strong> Set your Gemini API key in
+      <button class="ai-banner-link" id="open-ai-settings-2">API Settings</button> before using AI features.
+    </div>
 
     <section class="ai-grid" aria-label="AI tools list">
       <a class="ai-card" href="chat.html">
@@ -43,7 +50,79 @@
     </section>
   </main>
 
+  <!-- AI Settings Modal -->
+  <div id="ai-settings-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="AI API Settings">
+    <div class="modal-box">
+      <button class="modal-close" id="close-ai-settings" aria-label="Close">&times;</button>
+      <h2 class="modal-title">AI API Settings</h2>
+      <p style="font-size:0.875rem;color:var(--clr-muted);margin-bottom:16px">
+        Settings are saved in your browser and apply to all AI tools.
+      </p>
+      <form id="ai-settings-form" class="auth-form" novalidate>
+        <div class="auth-field">
+          <label for="ai-gemini-key">Gemini API Key</label>
+          <input id="ai-gemini-key" type="password" class="auth-input" placeholder="AIza..." data-setting="geminiApiKey" autocomplete="off">
+        </div>
+        <div class="auth-field">
+          <label for="ai-gemini-base">Gemini API Base URL</label>
+          <input id="ai-gemini-base" type="url" class="auth-input" placeholder="https://generativelanguage.googleapis.com/v1beta" data-setting="geminiApiBase">
+        </div>
+        <div class="auth-field">
+          <label for="ai-chat-endpoint">Custom Chat Endpoint (optional)</label>
+          <input id="ai-chat-endpoint" type="url" class="auth-input" placeholder="https://..." data-setting="chatEndpoint">
+        </div>
+        <div class="auth-field">
+          <label for="ai-plagiarism-endpoint">Plagiarism Endpoint (optional)</label>
+          <input id="ai-plagiarism-endpoint" type="url" class="auth-input" placeholder="https://..." data-setting="plagiarismEndpoint">
+        </div>
+        <div class="auth-field">
+          <label for="ai-references-endpoint">References Endpoint (optional)</label>
+          <input id="ai-references-endpoint" type="url" class="auth-input" placeholder="https://..." data-setting="referencesEndpoint">
+        </div>
+        <button type="submit" class="btn btn-primary auth-submit">Save Settings</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="../../js/config.js"></script>
+  <script src="../../js/auth.js"></script>
   <script src="../../js/nav.js"></script>
+  <script type="module">
+    import { loadSettings, saveSettings, bindSettings } from './http.js';
+
+    const modal = document.getElementById('ai-settings-modal');
+    const banner = document.getElementById('ai-settings-banner');
+    const form = document.getElementById('ai-settings-form');
+
+    function openSettings() { modal.classList.add('is-open'); }
+    function closeSettings() { modal.classList.remove('is-open'); }
+
+    document.getElementById('open-ai-settings').addEventListener('click', openSettings);
+    document.getElementById('open-ai-settings-2')?.addEventListener('click', openSettings);
+    document.getElementById('close-ai-settings').addEventListener('click', closeSettings);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeSettings(); });
+
+    // Fill form with stored settings
+    bindSettings(form);
+
+    // Save on submit
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const current = loadSettings();
+      const next = { ...current };
+      form.querySelectorAll('[data-setting]').forEach((input) => {
+        next[input.dataset.setting] = input.value.trim();
+      });
+      saveSettings(next);
+      closeSettings();
+    });
+
+    // Show banner if no API key
+    const settings = loadSettings();
+    if (!settings.geminiApiKey) {
+      banner.style.display = 'block';
+    }
+  </script>
 
 </body>
 </html>
