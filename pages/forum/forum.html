@@ -1,58 +1,144 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Forum — Protocol</title>
-    <link rel="stylesheet" href="../../css/style.css" />
-    <link rel="stylesheet" href="stylef.css" />
-  </head>
-  <body>
-    <div id="site-nav"></div>
+<head>
+  <meta charset="UTF-8">
+  <title>Diễn đàn cộng đồng</title>
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="forum.css">
+</head>
+<body>
+  <div id="site-nav"></div>
 
-    <div class="forum-root">
-      <a class="back-link" href="../../index.html">← Trang chủ</a>
-
-      <div class="forum-hero">
-        <div class="forum-hero-top">
-          <div>
-            <h2 class="forum-title">Cộng đồng Học tập</h2>
-            <p class="forum-sub">Trao đổi dành riêng cho thành viên đã đăng ký</p>
-          </div>
-          <button id="btn-open-modal" class="btn btn-primary">+ Bài viết mới</button>
-        </div>
-        <div id="tags-container" class="forum-tags"></div>
-      </div>
-
-      <div id="posts-container"></div>
+  <div class="search-top-bar">
+    <div class="search-container">
+      <input type="text" id="searchInput" class="forum-input search-input" placeholder="Tìm kiếm gợi ý (ví dụ: AI, Marketing...)" oninput="renderPosts()">
+      <button class="forum-btn primary create-btn" onclick="openCreateModal()"> Tạo bài</button>
     </div>
+  </div>
 
-    <!-- Create post modal -->
-    <div id="create-modal" class="modal-overlay" style="display:none">
-      <div class="modal-box">
-        <button class="modal-close" id="btn-close-modal">✕</button>
-        <h3 style="font-size:18px;font-weight:700;margin-bottom:20px;color:var(--clr-text)">Tạo bài viết mới</h3>
-        <div class="auth-form">
-          <div class="auth-field">
-            <input type="text" id="post-title" class="auth-input" placeholder="Tiêu đề bài viết" />
-          </div>
-          <div class="auth-field">
-            <textarea id="post-content" class="auth-input" placeholder="Nội dung chia sẻ..." rows="5" style="resize:vertical;min-height:120px"></textarea>
-          </div>
-          <div class="auth-field">
-            <input type="text" id="post-tags" class="auth-input" placeholder="Tags (phân cách bởi dấu phẩy): Hỏi đáp, Tips..." />
-          </div>
-          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
-            <button id="btn-cancel-modal" class="btn btn-outline">Hủy</button>
-            <button id="btn-submit-post" class="btn btn-primary">Đăng bài</button>
-          </div>
+  <main class="forum-layout">
+    <div class="feed-column">
+      
+      <div class="filter-bar" id="filterBar">
+        <div id="filterTagsContainer" class="flex-row gap-8 wrap"></div>
+        <div class="flex-row gap-8">
+          <select id="sortMode" class="forum-input small-input" onchange="renderPosts()">
+            <option value="recent_interact"> Theo lượt tương tác</option>
+            <option value="date_desc"> Theo thời gian </option>
+          </select>
         </div>
       </div>
+
+      <div id="postsContainer" class="flex-col gap-16 mt-8"></div>
+
+      <div id="threadContainer" style="display: none;">
+        <button class="forum-btn outline small" style="margin-bottom: 16px;" onclick="closeThread()">← Quay lại bảng tin</button>
+        <div id="threadContent"></div>
+        
+        <div class="thread-comments-section mt-8">
+          <h4 style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--clr-border);">Bình luận</h4>
+          <div id="threadCommentsList" class="flex-col gap-16"></div>
+          
+          <div class="mt-8" style="border-top: 1px solid var(--clr-border); padding-top: 16px;">
+            <div id="replyIndicator" class="reply-indicator">
+              <span>Đang trả lời: <strong id="replyingToName"></strong></span>
+              <button class="cancel-reply-btn" onclick="cancelReply()">✕</button>
+            </div>
+            
+            <div class="comment-input-area" style="border-top: none; padding-top: 0;">
+              <input type="text" id="commentInput" class="forum-input flex-1" placeholder="Viết bình luận của bạn (Enter để gửi)..." onkeypress="handleCommentEnter(event)">
+              <button class="forum-btn primary" onclick="submitComment()">Gửi</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <script src="../../js/config.js"></script>
-    <script src="../../js/auth.js"></script>
-    <script src="../../js/nav.js"></script>
-    <script src="navf.js"></script>
-  </body>
+    <div class="sidebar-column">
+      <div class="forum-box profile-widget" style="text-align: center; background: var(--clr-surface); border: 1px solid var(--clr-border); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+        <img id="sysAvatarPreview" src="" alt="Avatar" style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 2px solid var(--clr-border);">
+        <h3 id="sysUserName" style="margin-bottom: 4px; font-size: 1.1rem; cursor: pointer;" onclick="changeUserName()" title="Bấm để đổi tên">Người dùng</h3>
+        <div id="premiumStatusText" style="font-size: 0.85rem; color: var(--clr-muted); margin-bottom: 12px;">Tài khoản thường</div>
+        
+        <div class="flex-row gap-8" style="justify-content: center;">
+          <label class="forum-btn outline small" style="cursor: pointer; padding: 6px 12px; font-size: 0.8rem;">
+            📷 Đổi Avatar
+            <input type="file" style="display: none;" accept="image/*" onchange="updateSystemAvatar(event)">
+          </label>
+          <button id="buyPremiumBtn" class="forum-btn small" style="background:#fef08a; color:#854d0e; border: 1px solid #eab308;" onclick="buyPremium()">Nâng cấp</button>
+        </div>
+      </div>
+
+      <div class="widget-box">
+        <div class="widget-header">
+          <h4>Thảo luận nổi bật</h4>
+          <span class="view-all" onclick="filterOnly('post')">Xem tất cả</span>
+        </div>
+        <div id="trendingPostsWidget" class="widget-content"></div>
+      </div>
+
+      <div class="widget-box">
+        <div class="widget-header">
+          <h4>Khảo sát đang diễn ra</h4>
+          <span class="view-all" onclick="filterOnly('poll')">Xem tất cả</span>
+        </div>
+        <div id="activePollsWidget" class="widget-content"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="createPostModal" class="modal-overlay" onclick="closeCreateModal(event)">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Tạo Bài Đăng / Khảo Sát</h3>
+        <button class="close-btn" onclick="closeCreateModal(true)">✕</button>
+      </div>
+      
+      <div class="flex-row gap-8 mt-8" id="premiumColorPickerSection" style="display: none; align-items: center; background: #fefce8; padding: 10px; border-radius: 8px;">
+        <label style="font-size: 0.85rem; font-weight: 600; color: #854d0e;"> Màu tên (Premium):</label>
+        <input type="color" id="postNameColor" value="#3a6cf4" style="cursor: pointer; border: none; padding:0; width:28px; height:28px; border-radius: 4px;">
+      </div>
+
+      <input type="text" id="postTitle" class="forum-input w-100 mt-8" placeholder="Tiêu đề bài đăng" style="font-size: 1.1rem; font-weight: 600;">
+      <textarea id="postContent" class="forum-input w-100 mt-8" placeholder="Nội dung chi tiết..." rows="4"></textarea>
+      
+      <div class="mt-8" style="padding: 12px; border: 1px dashed var(--clr-border); border-radius: 8px; background: #f8fafc; color: #1c1e24;">
+        <strong style="font-size: 0.85rem; display: block; margin-bottom: 6px;">📎 Đính kèm File (Ảnh, Tài liệu...):</strong>
+        <input type="file" id="postFile" style="font-size: 0.85rem;">
+      </div>
+
+      <div class="flex-row gap-8 wrap mt-8">
+        <select id="postType" class="forum-input" onchange="togglePollUI()">
+          <option value="post">Thảo luận</option>
+          <option value="poll">Khảo sát</option>
+        </select>
+        <select id="postPrivacy" class="forum-input">
+          <option value="public">Công khai</option>
+          <option value="locked"> Khóa bài (Premium)</option>
+        </select>
+      </div>
+
+      <div id="pollUI" class="poll-setup-box mt-8" style="display: none;">
+        <div id="pollInputsContainer" class="flex-col gap-8">
+          <input type="text" class="forum-input poll-option-input" placeholder="Lựa chọn 1">
+          <input type="text" class="forum-input poll-option-input" placeholder="Lựa chọn 2">
+        </div>
+        <button class="forum-btn outline small mt-8" onclick="addPollInput()">+ Thêm lựa chọn</button>
+      </div>
+      
+      <div class="mt-8">
+        <strong style="font-size: 0.85rem;">Tags:</strong>
+        <div id="postTagsContainer" class="flex-row gap-8 wrap mt-8"></div>
+      </div>
+
+      <div style="text-align: right; margin-top: 24px;">
+        <button class="forum-btn primary" onclick="createPost()">Đăng bài</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../js/nav.js"></script>
+  <script src="forum.js"></script>
+</body>
 </html>
