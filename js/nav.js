@@ -60,6 +60,15 @@
 
           <div class="navbar-auth">
             <button id="theme-toggle" class="btn btn-outline" title="Toggle theme">🌙</button>
+            ${user ? `
+            <div class="nav-bell-wrapper" id="nav-bell-wrapper">
+              <button class="nav-bell-btn" id="nav-bell" title="Notifications">🔔</button>
+              <span class="nav-bell-badge" id="nav-bell-badge" style="display:none">0</span>
+              <div class="nav-bell-dropdown" id="nav-bell-dropdown">
+                <div class="nav-bell-header">Notifications</div>
+                <div id="nav-notif-list" class="nav-notif-list"><p class="nav-notif-empty">Loading...</p></div>
+              </div>
+            </div>` : ""}
             ${authSection}
           </div>
 
@@ -535,6 +544,96 @@
         openModal("login-modal");
       });
     });
+  }
+
+  // --- bfcache fix: re-apply theme on back/forward restore ---
+  window.addEventListener("pageshow", function(e) {
+    if (e.persisted) {
+      const saved = localStorage.getItem("theme");
+      if (saved === "dark") {
+        document.body.classList.add("dark");
+        const btn = document.getElementById("theme-toggle");
+        if (btn) btn.innerText = "☀️";
+      } else {
+        document.body.classList.remove("dark");
+        const btn = document.getElementById("theme-toggle");
+        if (btn) btn.innerText = "🌙";
+      }
+    }
+  });
+
+  // --- Global heartbeat — keeps user "online" on every page ---
+  if (user) {
+    const _hb = async function() {
+      try {
+        await fetch(`${API}/users/heartbeat`, {
+          method: "PUT",
+          headers: { Authorization: "Bearer " + window.Auth.getToken() },
+        });
+      } catch {}
+    };
+    _hb();
+    setInterval(_hb, 30000);
+  }
+
+  // --- Notification polling ---
+  if (user) {
+    const bellEl = document.getElementById("nav-bell");
+    const badgeEl = document.getElementById("nav-bell-badge");
+    const notifList = document.getElementById("nav-notif-list");
+    const bellDropdown = document.getElementById("nav-bell-dropdown");
+
+    async function fetchNotifications() {
+      try {
+        const token = window.Auth.getToken();
+        const r = await fetch(`${API}/notifications`, { headers: { Authorization: "Bearer " + token } });
+        if (!r.ok) return;
+        const items = await r.json();
+        const unread = items.filter(function(n) { return !n.read; }).length;
+        if (badgeEl) {
+          badgeEl.textContent = unread > 9 ? "9+" : String(unread);
+          badgeEl.style.display = unread > 0 ? "flex" : "none";
+        }
+        if (notifList) {
+          notifList.innerHTML = items.length
+            ? items.slice(0, 10).map(function(n) {
+                const icon = n.type === "message" ? "💬" : "🗨️";
+                return `<div class="nav-notif-item${n.read ? "" : " unread"}">
+                  <span class="nav-notif-icon">${icon}</span>
+                  <div class="nav-notif-body">
+                    <p>${n.message}</p>
+                    <span class="nav-notif-time">${new Date(n.created_at).toLocaleString()}</span>
+                  </div>
+                </div>`;
+              }).join("")
+            : `<p class="nav-notif-empty">No notifications</p>`;
+        }
+      } catch {}
+    }
+
+    fetchNotifications();
+    setInterval(fetchNotifications, 30000);
+
+    if (bellEl && bellDropdown) {
+      bellEl.addEventListener("click", async function(e) {
+        e.stopPropagation();
+        bellDropdown.classList.toggle("is-open");
+        if (bellDropdown.classList.contains("is-open")) {
+          try {
+            await fetch(`${API}/notifications/read`, {
+              method: "PATCH",
+              headers: { Authorization: "Bearer " + window.Auth.getToken() },
+            });
+            if (badgeEl) badgeEl.style.display = "none";
+          } catch {}
+        }
+      });
+      document.addEventListener("click", function(e) {
+        if (!bellEl.closest(".nav-bell-wrapper").contains(e.target)) {
+          bellDropdown.classList.remove("is-open");
+        }
+      });
+    }
   }
 })();
 

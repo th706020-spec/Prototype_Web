@@ -41,21 +41,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const memberRowsEl          = document.getElementById("member-rows");
   const mentorRowsEl          = document.getElementById("mentor-rows");
 
+  const conversationRowsEl = document.getElementById("conversation-rows");
+
   let currentActiveUser = null;
   let pollInterval = null;
-
-  // Heartbeat — update last_seen every 30s
-  async function heartbeat() {
-    if (!token) return;
-    try {
-      await fetch(`${API}/users/heartbeat`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch {}
-  }
-  heartbeat();
-  setInterval(heartbeat, 30000);
+  let onlineRefreshInterval = null;
 
   // Fetch users (online only)
   async function fetchUsers() {
@@ -132,22 +122,69 @@ document.addEventListener("DOMContentLoaded", async () => {
     startPolling();
   }
 
-  // Populate member lists (online only)
-  const allUsers = await fetchUsers();
-  const onlineUsers = allUsers.filter((u) => u.username !== currentUser && u.is_online);
-  const onlineMembers = onlineUsers.filter((u) => u.tier !== "premium");
-  const onlineMentors = onlineUsers.filter((u) => u.tier === "premium");
+  // Build a conversation row (Messenger-style recent chat)
+  function buildConversationRow(conv) {
+    const avatar = conv.avatar_url
+      ? conv.avatar_url
+      : avatarUrl(conv.peer);
+    const preview = conv.last_message
+      ? (conv.last_message.length > 40 ? conv.last_message.slice(0, 40) + "…" : conv.last_message)
+      : "";
+    return `
+      <div class="messenger-row" data-username="${conv.peer}" data-avatar="${avatar}">
+        <div class="avatar-with-status">
+          <img class="row-avatar" src="${avatar}" alt="${conv.peer}">
+        </div>
+        <div class="row-info">
+          <h4>${conv.peer}</h4>
+          <span style="font-size:12px;color:var(--clr-muted)">${preview}</span>
+        </div>
+      </div>`;
+  }
 
-  if (memberRowsEl) {
-    memberRowsEl.innerHTML = onlineMembers.length
-      ? onlineMembers.slice(0, 3).map(buildMemberRow).join("")
-      : `<p style="padding:12px;color:var(--clr-muted);font-size:13px">No members online</p>`;
+  // Fetch and render online member/mentor lists
+  async function refreshOnlineLists() {
+    const allUsers = await fetchUsers();
+    const onlineUsers = allUsers.filter((u) => u.username !== currentUser && u.is_online);
+    const onlineMembers = onlineUsers.filter((u) => u.tier !== "premium");
+    const onlineMentors = onlineUsers.filter((u) => u.tier === "premium");
+
+    if (memberRowsEl) {
+      memberRowsEl.innerHTML = onlineMembers.length
+        ? onlineMembers.slice(0, 3).map(buildMemberRow).join("")
+        : `<p style="padding:12px;color:var(--clr-muted);font-size:13px">No members online</p>`;
+    }
+    if (mentorRowsEl) {
+      mentorRowsEl.innerHTML = onlineMentors.length
+        ? onlineMentors.slice(0, 1).map(buildMemberRow).join("")
+        : `<p style="padding:12px;color:var(--clr-muted);font-size:13px">No mentors online</p>`;
+    }
   }
-  if (mentorRowsEl) {
-    mentorRowsEl.innerHTML = onlineMentors.length
-      ? onlineMentors.slice(0, 1).map(buildMemberRow).join("")
-      : `<p style="padding:12px;color:var(--clr-muted);font-size:13px">No mentors online</p>`;
+
+  // Fetch and render conversation history
+  async function refreshConversations() {
+    if (!conversationRowsEl || !token) return;
+    try {
+      const res = await fetch(`${API}/messages/conversations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const convs = await res.json();
+      conversationRowsEl.innerHTML = convs.length
+        ? convs.map(buildConversationRow).join("")
+        : `<p style="padding:12px;color:var(--clr-muted);font-size:13px">No conversations yet</p>`;
+    } catch {}
   }
+
+  // Initial load
+  await refreshOnlineLists();
+  await refreshConversations();
+
+  // Auto-refresh online list every 15s
+  onlineRefreshInterval = setInterval(async () => {
+    await refreshOnlineLists();
+    await refreshConversations();
+  }, 15000);
 
   // Click on member row
   document.addEventListener("click", (e) => {
@@ -165,11 +202,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       await fetch(`${API}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sender: currentUser, receiver: currentActiveUser, content: text }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ receiver: currentActiveUser, content: text }),
       });
       if (chatInput) chatInput.value = "";
       await loadMessages();
+      await refreshConversations();
     } catch {}
   }
 

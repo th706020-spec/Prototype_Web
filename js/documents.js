@@ -329,7 +329,9 @@ function viewDocument(id, filename, name, originalName) {
   const viewable = ['pdf','docx','doc','txt','md'];
 
   if (id && viewable.includes(ext)) {
-    body.innerHTML = `<iframe src="${API}/docs/${id}/view" style="width:100%;height:100%;border:none;" title="${name}"></iframe>`;
+    // Always show preview on white background regardless of page dark mode
+    body.style.background = "#fff";
+    body.innerHTML = `<iframe src="${API}/docs/${id}/view" style="width:100%;height:100%;border:none;background:#fff;" title="${name}"></iframe>`;
   } else {
     body.innerHTML = `
       <div style="text-align:center;padding:60px 20px;color:var(--clr-muted)">

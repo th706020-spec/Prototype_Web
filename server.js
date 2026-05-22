@@ -99,12 +99,15 @@ db.serialize(() => {
     )
   `);
 
-  // Add columns to existing users table if they don't exist yet
+  // Add columns to existing tables if they don't exist yet (safe — errors are swallowed)
   db.run("ALTER TABLE users ADD COLUMN avatar_url TEXT", () => {});
   db.run("ALTER TABLE users ADD COLUMN last_seen DATETIME", () => {});
-  // Add columns to existing documents table if they don't exist yet
+  db.run("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'member'", () => {});
   db.run("ALTER TABLE documents ADD COLUMN doc_type TEXT DEFAULT 'General'", () => {});
   db.run("ALTER TABLE documents ADD COLUMN univ TEXT DEFAULT ''", () => {});
+  db.run("ALTER TABLE forum_posts ADD COLUMN image_url TEXT", () => {});
+  db.run("ALTER TABLE forum_posts ADD COLUMN comment_count INTEGER DEFAULT 0", () => {});
+  db.run("ALTER TABLE forum_posts ADD COLUMN type TEXT DEFAULT 'post'", () => {});
 
   db.run(`
     CREATE TABLE IF NOT EXISTS documents (
@@ -131,6 +134,8 @@ db.serialize(() => {
       upvotes INTEGER DEFAULT 0,
       downvotes INTEGER DEFAULT 0,
       is_pinned INTEGER DEFAULT 0,
+      image_url TEXT,
+      type TEXT DEFAULT 'post',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       last_active DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -147,6 +152,64 @@ db.serialize(() => {
       parent_comment_id INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (post_id) REFERENCES forum_posts(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS forum_post_votes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      post_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      direction TEXT NOT NULL,
+      UNIQUE(post_id, user_id),
+      FOREIGN KEY (post_id) REFERENCES forum_posts(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS forum_polls (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      post_id INTEGER NOT NULL,
+      question TEXT NOT NULL,
+      options TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (post_id) REFERENCES forum_posts(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS forum_poll_votes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      poll_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      option_index INTEGER NOT NULL,
+      UNIQUE(poll_id, user_id),
+      FOREIGN KEY (poll_id) REFERENCES forum_polls(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS role_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      requested_role TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
+      reviewed_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      ref_id INTEGER,
+      message TEXT NOT NULL,
+      read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
 });
@@ -189,11 +252,11 @@ app.post("/api/auth/signup", async (req, res) => {
           return res.status(500).json({ error: err.message });
         }
         const token = jwt.sign(
-          { id: this.lastID, username, email, tier: "member" },
+          { id: this.lastID, username, email, tier: "member", role: "member" },
           JWT_SECRET,
           { expiresIn: "7d" }
         );
-        res.json({ token, user: { id: this.lastID, username, email, tier: "member" } });
+        res.json({ token, user: { id: this.lastID, username, email, tier: "member", role: "member" } });
       }
     );
   } catch (err) {
@@ -219,13 +282,13 @@ app.post("/api/auth/login", (req, res) => {
       if (!valid) return res.status(401).json({ error: "Invalid credentials" });
 
       const token = jwt.sign(
-        { id: user.id, username: user.username, email: user.email, tier: user.tier },
+        { id: user.id, username: user.username, email: user.email, tier: user.tier, role: user.role || "member" },
         JWT_SECRET,
         { expiresIn: "7d" }
       );
       res.json({
         token,
-        user: { id: user.id, username: user.username, email: user.email, tier: user.tier },
+        user: { id: user.id, username: user.username, email: user.email, tier: user.tier, role: user.role || "member" },
       });
     }
   );
@@ -240,9 +303,9 @@ app.get("/api/auth/check-username/:username", (req, res) => {
 });
 
 app.get("/api/auth/me", requireAuth, (req, res) => {
-  db.get("SELECT id, username, email, tier, avatar_url, created_at FROM users WHERE id = ?", [req.user.id], (err, user) => {
+  db.get("SELECT id, username, email, tier, role, avatar_url, created_at FROM users WHERE id = ?", [req.user.id], (err, user) => {
     if (err || !user) return res.json({ user: req.user });
-    res.json({ user: { ...req.user, avatar_url: user.avatar_url, created_at: user.created_at } });
+    res.json({ user: { ...req.user, role: user.role || "member", avatar_url: user.avatar_url, created_at: user.created_at } });
   });
 });
 
@@ -257,16 +320,16 @@ app.patch("/api/auth/username", requireAuth, async (req, res) => {
     if (!valid) return res.status(401).json({ error: "Incorrect password" });
 
     db.run("UPDATE users SET username = ? WHERE id = ?", [newUsername, req.user.id], function(err2) {
-      if (err2) {
-        if (err2.message.includes("UNIQUE")) return res.status(409).json({ error: "Username already taken" });
-        return res.status(500).json({ error: err2.message });
-      }
-      const token = jwt.sign(
-        { id: user.id, username: newUsername, email: user.email, tier: user.tier },
-        JWT_SECRET, { expiresIn: "7d" }
-      );
-      res.json({ token, user: { id: user.id, username: newUsername, email: user.email, tier: user.tier } });
-    });
+        if (err2) {
+          if (err2.message.includes("UNIQUE")) return res.status(409).json({ error: "Username already taken" });
+          return res.status(500).json({ error: err2.message });
+        }
+        const token = jwt.sign(
+          { id: user.id, username: newUsername, email: user.email, tier: user.tier, role: user.role || "member" },
+          JWT_SECRET, { expiresIn: "7d" }
+        );
+        res.json({ token, user: { id: user.id, username: newUsername, email: user.email, tier: user.tier, role: user.role || "member" } });
+      });
   });
 });
 
@@ -288,11 +351,18 @@ app.patch("/api/auth/password", requireAuth, async (req, res) => {
   });
 });
 
+const DEV_UPGRADE_KEY = process.env.DEV_UPGRADE_KEY || "protocol-dev-2025";
+const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET_KEY || "protocol-admin-2025";
+
 app.patch("/api/auth/upgrade", requireAuth, (req, res) => {
+  const { devKey } = req.body;
+  if (!devKey || devKey !== DEV_UPGRADE_KEY) {
+    return res.status(402).json({ error: "Payment required. Contact admin for dev access key." });
+  }
   db.run("UPDATE users SET tier = 'premium' WHERE id = ?", [req.user.id], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     const token = jwt.sign(
-      { id: req.user.id, username: req.user.username, email: req.user.email, tier: "premium" },
+      { id: req.user.id, username: req.user.username, email: req.user.email, tier: "premium", role: req.user.role || "member" },
       JWT_SECRET, { expiresIn: "7d" }
     );
     res.json({ token, user: { ...req.user, tier: "premium" } });
@@ -308,7 +378,109 @@ app.post("/api/auth/avatar", requireAuth, uploadAvatar.single("avatar"), (req, r
   });
 });
 
+// --- Role management routes ---
+const ALLOWED_ROLES = ["member", "mentor", "researcher", "mod", "admin", "premium"];
+const REQUEST_ROLES = ["mentor", "researcher", "mod"]; // need admin approval
+
+app.patch("/api/auth/set-role", requireAuth, (req, res) => {
+  const { adminKey, userId, role } = req.body;
+  if (!adminKey || adminKey !== ADMIN_SECRET_KEY) return res.status(403).json({ error: "Invalid admin key" });
+  if (!ALLOWED_ROLES.includes(role)) return res.status(400).json({ error: "Invalid role" });
+  const targetId = userId || req.user.id;
+  db.run("UPDATE users SET role = ? WHERE id = ?", [role, targetId], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, role });
+  });
+});
+
+app.post("/api/auth/request-role", requireAuth, (req, res) => {
+  const { role } = req.body;
+  if (!REQUEST_ROLES.includes(role)) return res.status(400).json({ error: "Role cannot be self-assigned" });
+  db.get("SELECT id FROM role_requests WHERE user_id = ? AND status = 'pending'", [req.user.id], (err, existing) => {
+    if (existing) return res.status(409).json({ error: "You already have a pending request" });
+    db.run("INSERT INTO role_requests (user_id, requested_role) VALUES (?, ?)", [req.user.id, role], function(err2) {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ id: this.lastID, role, status: "pending" });
+    });
+  });
+});
+
+app.get("/api/admin/role-requests", requireAuth, (req, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ error: "Admin only" });
+  db.all(
+    `SELECT rr.*, u.username, u.email FROM role_requests rr
+     JOIN users u ON rr.user_id = u.id WHERE rr.status = 'pending' ORDER BY rr.created_at ASC`,
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
+app.patch("/api/admin/role-requests/:id", requireAuth, (req, res) => {
+  if (req.user.role !== "admin") return res.status(403).json({ error: "Admin only" });
+  const { action } = req.body; // 'approve' or 'deny'
+  if (!["approve", "deny"].includes(action)) return res.status(400).json({ error: "action must be approve or deny" });
+
+  db.get("SELECT * FROM role_requests WHERE id = ?", [req.params.id], (err, rr) => {
+    if (err || !rr) return res.status(404).json({ error: "Request not found" });
+    const status = action === "approve" ? "approved" : "denied";
+    db.run("UPDATE role_requests SET status = ?, reviewed_by = ? WHERE id = ?", [status, req.user.id, rr.id], (err2) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      if (action === "approve") {
+        db.run("UPDATE users SET role = ? WHERE id = ?", [rr.requested_role, rr.user_id]);
+      }
+      res.json({ success: true, status });
+    });
+  });
+});
+
+// --- Notification routes ---
+app.get("/api/notifications", requireAuth, (req, res) => {
+  db.all(
+    "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 30",
+    [req.user.id],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
+app.patch("/api/notifications/read", requireAuth, (req, res) => {
+  db.run("UPDATE notifications SET read = 1 WHERE user_id = ?", [req.user.id], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ ok: true });
+  });
+});
+
 // --- Chat routes ---
+app.get("/api/messages/conversations", requireAuth, (req, res) => {
+  const me = req.user.username;
+  const query = `
+    SELECT
+      CASE WHEN sender = ? THEN receiver ELSE sender END AS peer,
+      content AS last_message,
+      MAX(timestamp) AS last_at
+    FROM messages
+    WHERE sender = ? OR receiver = ?
+    GROUP BY CASE WHEN sender = ? THEN receiver ELSE sender END
+    ORDER BY last_at DESC
+  `;
+  db.all(query, [me, me, me, me], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    // Enrich with avatar
+    const peers = rows.map(r => r.peer);
+    if (!peers.length) return res.json([]);
+    const placeholders = peers.map(() => "?").join(",");
+    db.all(`SELECT username, avatar_url FROM users WHERE username IN (${placeholders})`, peers, (err2, users) => {
+      const userMap = {};
+      (users || []).forEach(u => { userMap[u.username] = u.avatar_url; });
+      res.json(rows.map(r => ({ ...r, avatar_url: userMap[r.peer] || null })));
+    });
+  });
+});
+
 app.get("/api/messages/:user1/:user2", (req, res) => {
   const { user1, user2 } = req.params;
   const query = `
@@ -322,12 +494,24 @@ app.get("/api/messages/:user1/:user2", (req, res) => {
   });
 });
 
-app.post("/api/messages", (req, res) => {
-  const { sender, receiver, content } = req.body;
+app.post("/api/messages", requireAuth, (req, res) => {
+  const sender = req.user.username;
+  const { receiver, content } = req.body;
+  if (!receiver || !content) return res.status(400).json({ error: "receiver and content required" });
   const query = "INSERT INTO messages (sender, receiver, content) VALUES (?, ?, ?)";
   db.run(query, [sender, receiver, content], function (err) {
     if (err) return res.status(500).json({ error: err.message });
-    res.json({ id: this.lastID, sender, receiver, content });
+    const msgId = this.lastID;
+    // Notify recipient
+    db.get("SELECT id FROM users WHERE username = ?", [receiver], (e, u) => {
+      if (u) {
+        db.run(
+          "INSERT INTO notifications (user_id, type, ref_id, message) VALUES (?, 'message', ?, ?)",
+          [u.id, msgId, `New message from ${sender}`]
+        );
+      }
+    });
+    res.json({ id: msgId, sender, receiver, content });
   });
 });
 
@@ -464,33 +648,44 @@ app.post("/api/messages/file", requireAuth, uploadChatFile.single("file"), (req,
 // --- Forum routes ---
 app.get("/api/forum/posts", (req, res) => {
   const { tag, sort } = req.query;
-  let query = "SELECT * FROM forum_posts";
+  let query = `SELECT fp.*,
+    (SELECT COUNT(*) FROM forum_comments WHERE post_id = fp.id) AS comment_count,
+    fp2.id AS poll_id,
+    fp2.question AS poll_question,
+    fp2.options AS poll_options_json
+    FROM forum_posts fp
+    LEFT JOIN forum_polls fp2 ON fp2.post_id = fp.id`;
   const params = [];
   if (tag) {
-    query += " WHERE tags LIKE ?";
+    query += " WHERE fp.tags LIKE ?";
     params.push(`%"${tag}"%`);
   }
-  const orderMap = { hot: "upvotes DESC", new: "created_at DESC", old: "created_at ASC" };
-  query += " ORDER BY is_pinned DESC, " + (orderMap[sort] || "last_active DESC");
+  const orderMap = { hot: "fp.upvotes DESC", new: "fp.created_at DESC", old: "fp.created_at ASC" };
+  query += " ORDER BY fp.is_pinned DESC, " + (orderMap[sort] || "fp.last_active DESC");
   db.all(query, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json(rows.map(r => ({ ...r, tags: JSON.parse(r.tags || "[]") })));
+    res.json(rows.map(r => ({
+      ...r,
+      tags: JSON.parse(r.tags || "[]"),
+      poll_options: r.poll_options_json ? JSON.parse(r.poll_options_json) : null,
+    })));
   });
 });
 
 app.post("/api/forum/posts", requireAuth, (req, res) => {
-  const { title, content, tags } = req.body;
+  const { title, content, tags, type } = req.body;
   if (!title || !content) return res.status(400).json({ error: "title and content required" });
   const author = req.user;
   const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
+  const postType = ["post", "poll"].includes(type) ? type : "post";
   db.get("SELECT avatar_url FROM users WHERE id = ?", [author.id], (err, user) => {
     const avatarUrl = user?.avatar_url || null;
     db.run(
-      "INSERT INTO forum_posts (title, content, author_id, author_name, author_avatar, tags) VALUES (?, ?, ?, ?, ?, ?)",
-      [title, content, author.id, author.username, avatarUrl, tagsJson],
+      "INSERT INTO forum_posts (title, content, author_id, author_name, author_avatar, tags, type) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [title, content, author.id, author.username, avatarUrl, tagsJson, postType],
       function (err2) {
         if (err2) return res.status(500).json({ error: err2.message });
-        res.json({ id: this.lastID, title, content, author_name: author.username, tags, upvotes: 0, downvotes: 0, is_pinned: 0 });
+        res.json({ id: this.lastID, title, content, author_name: author.username, tags, type: postType, upvotes: 0, downvotes: 0, is_pinned: 0 });
       }
     );
   });
@@ -506,12 +701,52 @@ app.get("/api/forum/posts/:id", (req, res) => {
 });
 
 app.put("/api/forum/posts/:id/vote", requireAuth, (req, res) => {
-  const { direction } = req.body; // 'up' or 'down'
-  const col = direction === "up" ? "upvotes" : "downvotes";
-  db.run(`UPDATE forum_posts SET ${col} = ${col} + 1 WHERE id = ?`, [req.params.id], (err) => {
+  const postId = req.params.id;
+  const userId = req.user.id;
+  const { direction } = req.body;
+  if (!["up", "down"].includes(direction)) return res.status(400).json({ error: "direction must be up or down" });
+
+  db.get("SELECT * FROM forum_post_votes WHERE post_id = ? AND user_id = ?", [postId, userId], (err, existing) => {
     if (err) return res.status(500).json({ error: err.message });
-    db.get("SELECT upvotes, downvotes FROM forum_posts WHERE id = ?", [req.params.id], (e, r) => {
-      res.json(r || {});
+
+    const getAndReturn = () => {
+      db.get("SELECT upvotes, downvotes FROM forum_posts WHERE id = ?", [postId], (e, r) => res.json(r || {}));
+    };
+
+    if (existing && existing.direction === direction) {
+      // Same direction — un-vote
+      const col = direction === "up" ? "upvotes" : "downvotes";
+      db.run(`UPDATE forum_posts SET ${col} = MAX(0, ${col} - 1) WHERE id = ?`, [postId], () => {
+        db.run("DELETE FROM forum_post_votes WHERE post_id = ? AND user_id = ?", [postId, userId], getAndReturn);
+      });
+    } else if (existing) {
+      // Opposite direction — switch vote
+      const oldCol = existing.direction === "up" ? "upvotes" : "downvotes";
+      const newCol = direction === "up" ? "upvotes" : "downvotes";
+      db.run(`UPDATE forum_posts SET ${oldCol} = MAX(0, ${oldCol} - 1), ${newCol} = ${newCol} + 1 WHERE id = ?`, [postId], () => {
+        db.run("UPDATE forum_post_votes SET direction = ? WHERE post_id = ? AND user_id = ?", [direction, postId, userId], getAndReturn);
+      });
+    } else {
+      // New vote
+      const col = direction === "up" ? "upvotes" : "downvotes";
+      db.run(`UPDATE forum_posts SET ${col} = ${col} + 1 WHERE id = ?`, [postId], () => {
+        db.run("INSERT INTO forum_post_votes (post_id, user_id, direction) VALUES (?, ?, ?)", [postId, userId, direction], getAndReturn);
+      });
+    }
+  });
+});
+
+app.patch("/api/forum/posts/:id/pin", requireAuth, (req, res) => {
+  db.get("SELECT * FROM forum_posts WHERE id = ?", [req.params.id], (err, post) => {
+    if (err || !post) return res.status(404).json({ error: "Post not found" });
+    const role = req.user.role || "member";
+    const isOwner = post.author_id === req.user.id;
+    const isMod = ["admin", "mod"].includes(role);
+    if (!isOwner && !isMod) return res.status(403).json({ error: "Only the post author or moderators can pin posts" });
+    const newPin = post.is_pinned ? 0 : 1;
+    db.run("UPDATE forum_posts SET is_pinned = ? WHERE id = ?", [newPin, post.id], (err2) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ is_pinned: newPin });
     });
   });
 });
@@ -528,9 +763,104 @@ app.post("/api/forum/posts/:id/comments", requireAuth, (req, res) => {
       function (err2) {
         if (err2) return res.status(500).json({ error: err2.message });
         db.run("UPDATE forum_posts SET last_active = CURRENT_TIMESTAMP WHERE id = ?", [req.params.id]);
+        // Notify post owner
+        db.get("SELECT author_id FROM forum_posts WHERE id = ?", [req.params.id], (e, post) => {
+          if (post && post.author_id !== author.id) {
+            db.run(
+              "INSERT INTO notifications (user_id, type, ref_id, message) VALUES (?, 'comment', ?, ?)",
+              [post.author_id, req.params.id, `${author.username} commented on your post`]
+            );
+          }
+        });
         res.json({ id: this.lastID, post_id: req.params.id, author_name: author.username, content });
       }
     );
+  });
+});
+
+// --- Forum polls ---
+app.post("/api/forum/polls", requireAuth, (req, res) => {
+  const { post_id, question, options } = req.body;
+  if (!post_id || !question || !Array.isArray(options) || options.length < 2) {
+    return res.status(400).json({ error: "post_id, question and at least 2 options required" });
+  }
+  db.run(
+    "INSERT INTO forum_polls (post_id, question, options) VALUES (?, ?, ?)",
+    [post_id, question, JSON.stringify(options)],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ id: this.lastID, post_id, question, options });
+    }
+  );
+});
+
+app.get("/api/forum/polls/:postId", (req, res) => {
+  const userId = (() => {
+    try {
+      const h = req.headers["authorization"];
+      return h ? jwt.verify(h.split(" ")[1], JWT_SECRET).id : null;
+    } catch { return null; }
+  })();
+  db.get("SELECT * FROM forum_polls WHERE post_id = ?", [req.params.postId], (err, poll) => {
+    if (err || !poll) return res.json(null);
+    const opts = JSON.parse(poll.options || "[]");
+    db.all("SELECT option_index FROM forum_poll_votes WHERE poll_id = ?", [poll.id], (e, votes) => {
+      const counts = opts.map((_, i) => votes.filter(v => v.option_index === i).length);
+      const myVote = userId ? (votes.find(v => v.user_id === userId)?.option_index ?? null) : null;
+      // note: myVote from direct query — fix below
+      db.get("SELECT option_index FROM forum_poll_votes WHERE poll_id = ? AND user_id = ?", [poll.id, userId || 0], (e2, myRow) => {
+        res.json({ ...poll, options: opts, vote_counts: counts, my_vote: myRow ? myRow.option_index : null, total_votes: votes.length });
+      });
+    });
+  });
+});
+
+app.post("/api/forum/polls/:id/vote", requireAuth, (req, res) => {
+  const { option_index } = req.body;
+  if (option_index === undefined) return res.status(400).json({ error: "option_index required" });
+  db.get("SELECT * FROM forum_polls WHERE id = ?", [req.params.id], (err, poll) => {
+    if (err || !poll) return res.status(404).json({ error: "Poll not found" });
+    db.run(
+      "INSERT OR REPLACE INTO forum_poll_votes (poll_id, user_id, option_index) VALUES (?, ?, ?)",
+      [poll.id, req.user.id, option_index],
+      (err2) => {
+        if (err2) return res.status(500).json({ error: err2.message });
+        // Return updated counts
+        db.all("SELECT option_index FROM forum_poll_votes WHERE poll_id = ?", [poll.id], (e, votes) => {
+          const opts = JSON.parse(poll.options || "[]");
+          const counts = opts.map((_, i) => votes.filter(v => v.option_index === i).length);
+          res.json({ my_vote: option_index, vote_counts: counts, total_votes: votes.length });
+        });
+      }
+    );
+  });
+});
+
+// --- Forum image upload ---
+const forumImagesDir = path.join(uploadsDir, "forum");
+if (!fs.existsSync(forumImagesDir)) fs.mkdirSync(forumImagesDir);
+const uploadForumImage = multer({
+  storage: multer.diskStorage({
+    destination: forumImagesDir,
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, "forum-" + Date.now() + ext);
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+    cb(null, allowed.includes(path.extname(file.originalname).toLowerCase()));
+  },
+});
+
+app.post("/api/forum/posts/:id/image", requireAuth, uploadForumImage.single("image"), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+  const imageUrl = "/uploads/forum/" + req.file.filename;
+  db.run("UPDATE forum_posts SET image_url = ? WHERE id = ? AND author_id = ?", [imageUrl, req.params.id, req.user.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0) return res.status(403).json({ error: "Not authorized or post not found" });
+    res.json({ image_url: imageUrl });
   });
 });
 

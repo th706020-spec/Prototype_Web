@@ -5,6 +5,9 @@ const PIN_STORAGE_KEY = 'forum_pin_states';
 const LEGACY_STORAGE_KEY = 'forumData';
 const AVATAR_CACHE_KEY = 'protocol_avatar_url';
 
+// Vote debounce: prevent rapid-fire voting
+const _voteCooldown = new Map();
+
 function getAuthUser() {
   return window.Auth ? window.Auth.getUser() : null;
 }
@@ -150,6 +153,22 @@ function normalizeServerPost(serverPost, existingPost = {}) {
     ? serverPost.comments.map(normalizeComment)
     : (Array.isArray(existingPost.comments) ? existingPost.comments : []);
 
+  // Handle server-side poll data (from LEFT JOIN in GET /api/forum/posts)
+  const postType = serverPost.type === 'poll' ? 'poll' : 'post';
+  const pollId = serverPost.poll_id || existingPost.pollId || null;
+  let pollOptions = existingPost.pollOptions || [];
+  if (postType === 'poll' && Array.isArray(serverPost.poll_options)) {
+    // Convert server string array to { id, text, votes } format
+    pollOptions = serverPost.poll_options.map((text, i) => ({
+      id: i,
+      text: typeof text === 'string' ? text : String(text),
+      votes: 0
+    }));
+  }
+
+  // Handle image: server-stored image takes priority
+  const imageUrl = serverPost.image_url || null;
+
   return {
     ...existingPost,
     id: Number(serverPost.id),
@@ -161,22 +180,27 @@ function normalizeServerPost(serverPost, existingPost = {}) {
     privacy: existingPost.privacy || 'public',
     title: serverPost.title || existingPost.title || "Không có tiêu đề",
     content: serverPost.content || existingPost.content || "",
-    fileData: existingPost.fileData || null,
-    fileName: existingPost.fileName || null,
-    fileType: existingPost.fileType || null,
-    type: 'post',
+    // Image: use server image_url if present, else keep local fileData
+    image_url: imageUrl,
+    fileData: imageUrl ? null : (existingPost.fileData || null),
+    fileName: imageUrl ? null : (existingPost.fileName || null),
+    fileType: imageUrl ? null : (existingPost.fileType || null),
+    type: postType,
+    pollId,
     tags: normalizeTags(serverPost.tags),
     upvotes: Number(serverPost.upvotes) || 0,
     downvotes: Number(serverPost.downvotes) || 0,
+    comment_count: Number(serverPost.comment_count) || 0,
     currentUserVote: loadVoteState(serverPost.id),
-    pollOptions: [],
-    currentUserPollVote: null,
+    pollOptions,
+    currentUserPollVote: existingPost.currentUserPollVote !== undefined ? existingPost.currentUserPollVote : null,
     comments,
     createdAt: parseDateValue(serverPost.created_at || existingPost.createdAt),
     lastActive: parseDateValue(serverPost.last_active || serverPost.created_at || existingPost.lastActive),
     isPinned: localPin ? Boolean(localPin.isPinned) : Boolean(Number(serverPost.is_pinned)),
     pinnedAt: localPin?.pinnedAt || existingPost.pinnedAt || null,
-    threadLoaded: Array.isArray(serverPost.comments) ? true : Boolean(existingPost.threadLoaded)
+    threadLoaded: Array.isArray(serverPost.comments) ? true : Boolean(existingPost.threadLoaded),
+    user_id: serverPost.author_id || existingPost.user_id || null,
   };
 }
 
@@ -265,6 +289,29 @@ async function fetchPostDetails(postId) {
 
   const data = await fetchJSON(`${API}/forum/posts/${postId}`);
   const updatedPost = normalizeServerPost(data, post);
+
+  // Load actual poll vote counts if this is a poll post
+  if (updatedPost.type === 'poll' && updatedPost.pollId) {
+    try {
+      const token = window.Auth ? window.Auth.getToken() : null;
+      const pollRes = await fetch(`${API}/forum/polls/${postId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (pollRes.ok) {
+        const pollData = await pollRes.json();
+        if (pollData) {
+          updatedPost.pollId = pollData.id;
+          updatedPost.pollOptions = (pollData.options || []).map((text, i) => ({
+            id: i,
+            text: typeof text === 'string' ? text : String(text),
+            votes: pollData.vote_counts ? (pollData.vote_counts[i] || 0) : 0
+          }));
+          updatedPost.currentUserPollVote = (pollData.my_vote !== null && pollData.my_vote !== undefined) ? pollData.my_vote : null;
+        }
+      }
+    } catch {}
+  }
+
   replacePost(updatedPost);
   return updatedPost;
 }
@@ -292,6 +339,7 @@ let uploadedFileData = null;
 let uploadedFileName = null;
 let uploadedFileType = null;
 let currentOpenPostId = null;
+let uploadedFileRaw = null; // raw File object for server upload
 
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -306,6 +354,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       uploadedFileName = file.name;
       uploadedFileType = file.type;
+      uploadedFileRaw = file;
       const reader = new FileReader();
       reader.onload = function(e) { uploadedFileData = e.target.result; };
       reader.readAsDataURL(file);
@@ -461,36 +510,46 @@ async function createPost() {
 
   try {
     if (type === 'poll') {
-      const newPost = {
-        id: Date.now(),
-        source: 'local-poll',
-        author: sysName, 
-        authorAvatar: sysAvatar, 
-        authorColor: nameColor, isPremiumAuthor: isPremium, privacy: privacy,
-        title: title, content: content,
-        fileData: uploadedFileData, fileName: uploadedFileName, fileType: uploadedFileType,
-        type: type, tags: selectedTags,
-        upvotes: 0, downvotes: 0, currentUserVote: null, 
-        pollOptions: pollOptions, currentUserPollVote: null, 
-        comments: [], 
-        createdAt: Date.now(), lastActive: Date.now(), 
-        isPinned: false, pinnedAt: null,
-        threadLoaded: true
-      };
-
-      posts.unshift(newPost);
-      savePollPosts();
+      // Create poll on server (visible to all users)
+      const newPostData = await fetchJSON(`${API}/forum/posts`, {
+        method: 'POST',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({ title, content, tags: selectedTags, type: 'poll' })
+      });
+      // Create the poll options on server
+      await fetchJSON(`${API}/forum/polls`, {
+        method: 'POST',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({
+          post_id: newPostData.id,
+          question: title,
+          options: pollOptions.map(o => o.text)
+        })
+      });
+      await fetchPosts();
     } else {
-      await fetchJSON(`${API}/forum/posts`, {
+      const newPostData = await fetchJSON(`${API}/forum/posts`, {
         method: 'POST',
         headers: getAuthHeaders(true),
         body: JSON.stringify({ title, content, tags: selectedTags })
       });
+      // Upload image to server if one was selected and is an image
+      if (uploadedFileRaw && uploadedFileRaw.type.startsWith('image/') && newPostData.id) {
+        try {
+          const imgForm = new FormData();
+          imgForm.append('image', uploadedFileRaw);
+          await fetch(`${API}/forum/posts/${newPostData.id}/image`, {
+            method: 'POST',
+            headers: getAuthHeaders(false),
+            body: imgForm,
+          });
+        } catch {}
+      }
       await fetchPosts();
     }
     
     document.getElementById('postTitle').value = ''; document.getElementById('postContent').value = '';
-    document.getElementById('postFile').value = ''; uploadedFileData = null; uploadedFileName = null; uploadedFileType = null;
+    document.getElementById('postFile').value = ''; uploadedFileData = null; uploadedFileName = null; uploadedFileType = null; uploadedFileRaw = null;
     document.querySelectorAll('.post-tag-checkbox').forEach(cb => cb.checked = false);
     
     closeCreateModal(true);
@@ -506,28 +565,57 @@ function stagePollOption(postId, optionId) {
   if (currentOpenPostId) renderThreadView(); else renderPosts();
 }
 
-function confirmPollVote(postId) {
+async function confirmPollVote(postId) {
   const post = posts.find(p => p.id === postId);
   const optionId = pendingVotes[postId];
-  if (optionId === undefined || !post.pollOptions[optionId]) return;
+  if (optionId === undefined || !post || !post.pollOptions[optionId]) return;
 
-  post.pollOptions[optionId].votes++; 
-  post.currentUserPollVote = optionId; 
-  post.lastActive = Date.now();
-  
-  delete pendingVotes[postId]; 
-  savePollPosts();
+  if (post.source !== 'local-poll' && post.pollId) {
+    // Server poll — call API
+    if (!getAuthUser()) { promptLogin("Đăng nhập để bình chọn."); return; }
+    try {
+      const result = await fetchJSON(`${API}/forum/polls/${post.pollId}/vote`, {
+        method: 'POST',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({ option_index: optionId })
+      });
+      post.pollOptions = (post.pollOptions || []).map((opt, i) => ({
+        ...opt,
+        votes: result.vote_counts ? (result.vote_counts[i] || 0) : opt.votes
+      }));
+      post.currentUserPollVote = result.my_vote !== null && result.my_vote !== undefined ? result.my_vote : optionId;
+      post.lastActive = Date.now();
+    } catch (err) {
+      alert("Lỗi bình chọn: " + (err.message || "Unknown error"));
+      return;
+    }
+    delete pendingVotes[postId];
+  } else {
+    // Local poll
+    post.pollOptions[optionId].votes++;
+    post.currentUserPollVote = optionId;
+    post.lastActive = Date.now();
+    delete pendingVotes[postId];
+    savePollPosts();
+  }
   if (currentOpenPostId) renderThreadView(); else renderPosts();
 }
 
 function resetPollVote(postId) {
   const post = posts.find(p => p.id === postId);
+  if (!post) return;
+  // For server polls: just reset local state so user can vote again (server keeps old vote until new one submitted)
+  if (post.source !== 'local-poll' && post.pollId) {
+    post.currentUserPollVote = null;
+    post.lastActive = Date.now();
+    if (currentOpenPostId) renderThreadView(); else renderPosts();
+    return;
+  }
   const oldVoteId = post.currentUserPollVote;
   if (oldVoteId !== null && post.pollOptions[oldVoteId]) {
     post.pollOptions[oldVoteId].votes = Math.max(0, post.pollOptions[oldVoteId].votes - 1);
   }
-  
-  post.currentUserPollVote = null; 
+  post.currentUserPollVote = null;
   post.lastActive = Date.now();
   savePollPosts();
   if (currentOpenPostId) renderThreadView(); else renderPosts();
@@ -549,13 +637,23 @@ function generatePostHTML(post, isThreadView = false) {
     pinIcon = `<span style="color:#ef4444; font-size: 0.8rem; margin-right: 6px; font-weight: bold;">📌 Đã ghim (${daysLeft} ngày)</span>`;
   }
 
-  const commentCount = Array.isArray(post.comments) ? post.comments.length : 0;
+  const commentCount = post.comment_count ?? (Array.isArray(post.comments) ? post.comments.length : 0);
+  
+  // Pin button is only shown to the post author or admins/mods
+  const authForPin = getAuthUser();
+  const canPin = authForPin && (
+    String(post.user_id) === String(authForPin.id) ||
+    ['admin', 'mod'].includes(authForPin.role)
+  );
   
   // Ẩn nội dung nếu không có quyền
   const contentSnippet = canView ? post.content : `<div style="padding: 12px; background: #f8fafc; border: 1px dashed var(--clr-border); border-radius: 8px; font-style: italic; color: #64748b; font-size: 0.95rem;"> Nội dung đã bị khóa. Tính năng xem giới hạn cho tài khoản Premium, bạn bè, hoặc người được cấp quyền.</div>`;
 
   let attachmentHTML = '';
-  if (canView && post.fileData) {
+  if (canView && post.image_url) {
+    // Server-stored image
+    attachmentHTML = `<img src="${post.image_url}" class="card-image" alt="Image">`;
+  } else if (canView && post.fileData) {
     if (post.fileType && post.fileType.startsWith('image/')) attachmentHTML = `<img src="${post.fileData}" class="card-image" alt="Đính kèm">`;
     else attachmentHTML = `<a href="${post.fileData}" download="${post.fileName}" class="file-attachment"> <span>Tải xuống: ${post.fileName}</span></a>`;
   }
@@ -617,7 +715,7 @@ function generatePostHTML(post, isThreadView = false) {
           <button class="vote-btn ${isDownvoted}" onclick="handleVote(${post.id}, 'down')">▼ ${post.downvotes}</button>
           <button class="vote-btn ghost">💬 ${commentCount}</button>
         </div>
-        <button class="vote-btn ghost" onclick="togglePin(${post.id})">${post.isPinned ? '📌 Bỏ Ghim' : '📌 Ghim bài'}</button>
+        ${canPin ? `<button class="vote-btn ghost" onclick="togglePin(${post.id})">${post.isPinned ? '📌 Bỏ Ghim' : '📌 Ghim bài'}</button>` : ''}
       </div>
     </div>
   `;
@@ -769,6 +867,11 @@ async function handleVote(postId, voteType) {
   if (!post) return;
   if (!getAuthUser()) return promptLogin("Vui lòng đăng nhập để bình chọn.");
 
+  // Debounce: ignore if less than 600ms since last vote on this post
+  const now = Date.now();
+  if ((_voteCooldown.get(postId) || 0) > now) return;
+  _voteCooldown.set(postId, now + 600);
+
   const previousVote = post.currentUserVote;
 
   if (post.source === 'local-poll') {
@@ -787,16 +890,6 @@ async function handleVote(postId, voteType) {
     return;
   }
 
-  if (previousVote === voteType) {
-    if (voteType === 'up') post.upvotes = Math.max(0, post.upvotes - 1);
-    if (voteType === 'down') post.downvotes = Math.max(0, post.downvotes - 1);
-    post.currentUserVote = null;
-    post.lastActive = Date.now();
-    saveVoteState(postId, null);
-    if (currentOpenPostId) renderThreadView(); else renderPosts();
-    return;
-  }
-
   try {
     const voteData = await fetchJSON(`${API}/forum/posts/${postId}/vote`, {
       method: 'PUT',
@@ -806,13 +899,10 @@ async function handleVote(postId, voteType) {
 
     post.upvotes = Number(voteData?.upvotes) || 0;
     post.downvotes = Number(voteData?.downvotes) || 0;
-
-    if (previousVote === 'up' && voteType === 'down') post.upvotes = Math.max(0, post.upvotes - 1);
-    if (previousVote === 'down' && voteType === 'up') post.downvotes = Math.max(0, post.downvotes - 1);
-
-    post.currentUserVote = voteType;
+    // Same direction as previous = un-voted; otherwise voted
+    post.currentUserVote = previousVote === voteType ? null : voteType;
     post.lastActive = Date.now();
-    saveVoteState(postId, voteType);
+    saveVoteState(postId, post.currentUserVote);
   } catch (error) {
     alert("Lỗi: " + error.message);
   }
@@ -820,12 +910,35 @@ async function handleVote(postId, voteType) {
   if (currentOpenPostId) renderThreadView(); else renderPosts();
 }
 
-function togglePin(postId) {
+async function togglePin(postId) {
+  const authU = getAuthUser();
+  if (!authU) return promptLogin("Vui lòng đăng nhập.");
   const targetPost = posts.find(p => p.id === postId);
-  if (!targetPost.isPinned) {
-    targetPost.isPinned = true; targetPost.pinnedAt = Date.now();
-  } else { targetPost.isPinned = false; targetPost.pinnedAt = null; }
-  persistPinState(targetPost);
+  if (!targetPost) return;
+
+  const canPin = String(targetPost.user_id) === String(authU.id) || ['admin', 'mod'].includes(authU.role);
+  if (!canPin) return alert("Chỉ tác giả hoặc quản trị viên mới có thể ghim bài.");
+
+  if (targetPost.source === 'local-poll') {
+    targetPost.isPinned = !targetPost.isPinned;
+    targetPost.pinnedAt = targetPost.isPinned ? Date.now() : null;
+    savePollPosts();
+    if (currentOpenPostId) renderThreadView(); else renderPosts();
+    return;
+  }
+
+  try {
+    const result = await fetchJSON(`${API}/forum/posts/${postId}/pin`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(true),
+      body: JSON.stringify({ pin: !targetPost.isPinned }),
+    });
+    targetPost.isPinned = Boolean(result.is_pinned);
+    targetPost.pinnedAt = targetPost.isPinned ? Date.now() : null;
+    persistPinState(targetPost);
+  } catch (error) {
+    alert("Lỗi: " + error.message);
+  }
   if (currentOpenPostId) renderThreadView(); else renderPosts();
 }
 

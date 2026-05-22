@@ -45,11 +45,39 @@
           </div>
         </div>
         <p class="premium-payment-note">Scan to pay. After payment, click "Activate Premium" below and your account will be upgraded instantly.</p>
+
+        <!-- Dev key input: shown when URL contains ?dev=1 -->
+        <div id="dev-key-section" style="display:none; margin-bottom:12px;">
+          <label style="font-size:0.82rem;color:var(--clr-muted);margin-bottom:4px;display:block;">Developer Access Key</label>
+          <input type="password" id="dev-key-input" class="forum-input" placeholder="Enter dev key..." style="width:100%;font-size:0.9rem;">
+        </div>
+
         <button class="btn btn-primary premium-activate-btn" id="activate-premium-btn">⭐ Activate Premium</button>
         <p class="premium-activate-msg" id="premium-activate-msg" hidden></p>
         <p class="premium-already" id="premium-already" hidden>✅ You are already a Premium member!</p>
       </div>
     </div>
+
+    <!-- Role Request Section -->
+    <div class="premium-compare" style="margin-top:32px">
+      <h2 class="premium-compare-title">Apply for a Role</h2>
+      <p style="color:var(--clr-muted);font-size:0.9rem;margin-bottom:16px;">
+        Mentor, Researcher, and Moderator roles require admin approval.
+      </p>
+      <div id="role-request-section">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+          <div>
+            <label style="font-size:0.82rem;color:var(--clr-muted)">Requested Role</label>
+            <select id="role-request-select" class="forum-input" style="display:block;margin-top:4px;width:180px">
+              <option value="mentor">Mentor</option>
+              <option value="researcher">Researcher</option>
+              <option value="mod">Moderator</option>
+            </select>
+          </div>
+          <button class="btn btn-outline" id="role-request-btn">Request Role</button>
+        </div>
+        <p id="role-request-msg" hidden style="margin-top:10px;font-size:0.85rem"></p>
+      </div>
 
     <div class="premium-compare">
       <h2 class="premium-compare-title">Free vs Premium</h2>
@@ -79,6 +107,12 @@
   <script>
     const API = window.AppConfig.API;
 
+    // Show dev key input if ?dev=1 is in URL
+    if (new URLSearchParams(window.location.search).get("dev") === "1") {
+      const devSection = document.getElementById("dev-key-section");
+      if (devSection) devSection.style.display = "block";
+    }
+
     function updatePremiumPageState() {
       const user = window.Auth && window.Auth.getUser();
       const activateBtn = document.getElementById("activate-premium-btn");
@@ -99,13 +133,18 @@
         const user = window.Auth && window.Auth.getUser();
         if (!user) { alert("Please log in first."); return; }
         const msgEl = document.getElementById("premium-activate-msg");
+        const devKey = (document.getElementById("dev-key-input")?.value || "").trim();
         activateBtn.disabled = true;
         activateBtn.textContent = "Activating...";
         try {
           const token = window.Auth.getToken();
           const res = await fetch(`${API}/auth/upgrade`, {
             method: "PATCH",
-            headers: { Authorization: `Bearer ${token}` }
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(devKey ? { devKey } : {}),
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || "Failed");
@@ -115,12 +154,41 @@
           msgEl.hidden = false;
           setTimeout(() => window.location.href = "../../index.html", 1500);
         } catch (err) {
-          msgEl.textContent = err.message;
+          msgEl.textContent = "❌ " + err.message + " (Need dev key or payment)";
           msgEl.style.color = "#dc2626";
           msgEl.hidden = false;
           activateBtn.disabled = false;
           activateBtn.textContent = "⭐ Activate Premium";
         }
+      });
+    }
+
+    // Role request
+    const roleRequestBtn = document.getElementById("role-request-btn");
+    if (roleRequestBtn) {
+      roleRequestBtn.addEventListener("click", async function() {
+        const user = window.Auth && window.Auth.getUser();
+        if (!user) { alert("Please log in first."); return; }
+        const role = document.getElementById("role-request-select").value;
+        const msgEl = document.getElementById("role-request-msg");
+        roleRequestBtn.disabled = true;
+        try {
+          const token = window.Auth.getToken();
+          const res = await fetch(`${API}/auth/request-role`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ role }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Failed");
+          msgEl.textContent = "✅ Request submitted! An admin will review it.";
+          msgEl.style.color = "#22c55e";
+        } catch (err) {
+          msgEl.textContent = "❌ " + err.message;
+          msgEl.style.color = "#dc2626";
+        }
+        msgEl.hidden = false;
+        roleRequestBtn.disabled = false;
       });
     }
 
