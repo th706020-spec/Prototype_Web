@@ -102,7 +102,7 @@
         </div>
       </section>
 
-      <canvas id="wave-canvas" aria-hidden="true"></canvas>
+      <canvas id="ascii-bg-canvas" aria-hidden="true"></canvas>
     </main>
 
     <div id="site-footer"></div>
@@ -112,84 +112,83 @@
     <script src="js/nav.js"></script>
 
     <script>
-    // ASCII Donut background
-    (function () {
-      const canvas = document.getElementById('donut-canvas');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
+    // ── Shared: theme color helper ─────────────────────────────────────────
+    function getThemeRGB() {
+      var theme = localStorage.getItem('theme') || 'light';
+      var map = {
+        light:   [58,  108, 244],
+        dark:    [91,  133, 246],
+        gruvbox: [215, 153, 33],
+        sage:    [93,  138, 94],
+        nord:    [136, 192, 208],
+        tokyo:   [122, 162, 247],
+      };
+      return map[theme] || map.light;
+    }
 
-      let A = 0, B = 0;
-      const CHAR_W = 8, CHAR_H = 13;
+    // ── ASCII Donut background ─────────────────────────────────────────────
+    (function () {
+      var canvas = document.getElementById('donut-canvas');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+
+      var A = 0, B = 0;
+      var CHAR_W = 8, CHAR_H = 13;
 
       function resize() {
-        const hero = canvas.parentElement;
-        canvas.width = hero.offsetWidth;
+        var hero = canvas.parentElement;
+        canvas.width  = hero.offsetWidth;
         canvas.height = hero.offsetHeight;
       }
       resize();
       window.addEventListener('resize', resize);
 
-      // Brighter luminance chars for more definition
-      const CHARS = ' .,;-+*=#@$';
+      var CHARS = ' .,;-+*=#@$';
 
       function frame() {
-        const W = canvas.width, H = canvas.height;
+        var W = canvas.width, H = canvas.height;
         ctx.clearRect(0, 0, W, H);
 
-        const isDark = document.body.classList.contains('dark');
-        ctx.fillStyle = isDark ? 'rgba(100,140,255,0.32)' : 'rgba(58,108,244,0.20)';
-        ctx.font = `bold ${CHAR_W + 2}px monospace`;
+        var rgb = getThemeRGB();
+        ctx.fillStyle = 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.26)';
+        ctx.font = 'bold ' + (CHAR_W + 2) + 'px monospace';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
 
-        const cols = Math.floor(W / CHAR_W);
-        const rows = Math.floor(H / CHAR_H);
-        const output = new Array(cols * rows).fill(' ');
-        const zbuf   = new Array(cols * rows).fill(0);
+        var cols = Math.floor(W / CHAR_W);
+        var rows = Math.floor(H / CHAR_H);
+        var output = new Array(cols * rows).fill(' ');
+        var zbuf   = new Array(cols * rows).fill(0);
 
-        const sinA = Math.sin(A), cosA = Math.cos(A);
-        const sinB = Math.sin(B), cosB = Math.cos(B);
+        var sinA = Math.sin(A), cosA = Math.cos(A);
+        var sinB = Math.sin(B), cosB = Math.cos(B);
+        var K = Math.min(W, H) * 0.72;
 
-        // K: pixel scale for projection — use min dimension so donut fits vertically
-        // Larger value = bigger donut
-        const K = Math.min(W, H) * 0.72;
-
-        // R2 = 2.5 (torus radius), R1 = 1.1 (tube radius) — makes it look more donut-like
-        for (let theta = 0; theta < 6.28; theta += 0.05) {
-          const sinT = Math.sin(theta), cosT = Math.cos(theta);
-          for (let phi = 0; phi < 6.28; phi += 0.015) {
-            const sinP = Math.sin(phi), cosP = Math.cos(phi);
-
-            // Torus point: R2=2.5, R1=1.1
-            const h  = cosT + 2.5; // R2 + R1*cosT
-            const D  = 1 / (sinP * h * sinA + sinT * cosA + 5);
-            const t  = sinP * h * cosA - sinT * sinA;
-
-            // Pixel-based projection (corrects character cell aspect ratio)
-            const xPx = cols / 2 + (K / CHAR_W) * D * (cosP * h * cosB - t * sinB);
-            const yPx = rows / 2 + (K / CHAR_H) * D * (cosP * h * sinB + t * cosB);
-
-            const x = Math.floor(xPx);
-            const y = Math.floor(yPx);
-            const o = x + cols * y;
-
-            const L = Math.floor(8 * ((sinT * sinA - sinP * cosT * cosA) * cosB -
+        for (var theta = 0; theta < 6.28; theta += 0.05) {
+          var sinT = Math.sin(theta), cosT = Math.cos(theta);
+          for (var phi = 0; phi < 6.28; phi += 0.015) {
+            var sinP = Math.sin(phi), cosP = Math.cos(phi);
+            var h  = cosT + 2.5;
+            var D  = 1 / (sinP * h * sinA + sinT * cosA + 5);
+            var t  = sinP * h * cosA - sinT * sinA;
+            var xPx = cols / 2 + (K / CHAR_W) * D * (cosP * h * cosB - t * sinB);
+            var yPx = rows / 2 + (K / CHAR_H) * D * (cosP * h * sinB + t * cosB);
+            var x = Math.floor(xPx), y = Math.floor(yPx);
+            var o = x + cols * y;
+            var L = Math.floor(8 * ((sinT * sinA - sinP * cosT * cosA) * cosB -
                           sinP * cosT * sinA - sinT * cosA - cosP * cosT * sinB));
-
             if (y > 0 && y < rows && x > 0 && x < cols && D > zbuf[o]) {
               zbuf[o] = D;
-              const idx = Math.max(0, Math.min(L, CHARS.length - 1));
+              var idx = Math.max(0, Math.min(L, CHARS.length - 1));
               output[o] = CHARS[idx] || '.';
             }
           }
         }
 
-        for (let r = 0; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
-            const ch = output[c + cols * r];
-            if (ch && ch !== ' ') {
-              ctx.fillText(ch, c * CHAR_W, r * CHAR_H);
-            }
+        for (var r = 0; r < rows; r++) {
+          for (var c = 0; c < cols; c++) {
+            var ch = output[c + cols * r];
+            if (ch && ch !== ' ') ctx.fillText(ch, c * CHAR_W, r * CHAR_H);
           }
         }
 
@@ -197,64 +196,61 @@
         B += 0.004;
         requestAnimationFrame(frame);
       }
-
       frame();
     })();
 
     // ── Card hover ASCII animations ────────────────────────────────────────
     (function () {
-      const cards = document.querySelectorAll('.card-ascii-canvas');
+      var cards = document.querySelectorAll('.card-ascii-canvas');
+
+      function fillStyle(alpha) {
+        var rgb = getThemeRGB();
+        return 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + alpha + ')';
+      }
 
       // Doc card: characters being typed left-to-right top-to-bottom
       function animateDoc(ctx, w, h, progress) {
         ctx.clearRect(0, 0, w, h);
-        const isDark = document.body.classList.contains('dark');
-        ctx.fillStyle = isDark ? 'rgba(91,133,246,0.28)' : 'rgba(58,108,244,0.18)';
+        ctx.fillStyle = fillStyle(0.22);
         ctx.font = '11px monospace';
-        const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,;:?!-_';
-        const cw = 9, ch = 14;
-        const cols = Math.floor(w / cw), rows = Math.floor(h / ch);
-        const total = cols * rows;
-        const filled = Math.floor(total * Math.min(progress, 1));
-        for (let i = 0; i < filled; i++) {
-          const c = i % cols, r = Math.floor(i / cols);
-          ctx.fillText(charset[(i * 7 + Math.floor(progress * 100)) % charset.length], c * cw + 2, r * ch + ch);
+        var charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,;:?!-_';
+        var cw = 9, ch = 14;
+        var cols = Math.floor(w / cw), rows = Math.floor(h / ch);
+        var total = cols * rows;
+        var filled = Math.floor(total * Math.min(progress, 1));
+        for (var i = 0; i < filled; i++) {
+          var col = i % cols, row = Math.floor(i / cols);
+          ctx.fillText(charset[(i * 7 + Math.floor(progress * 100)) % charset.length], col * cw + 2, row * ch + ch);
         }
       }
 
       // Forum card: post text then comments appearing
-      function animateForumLine(ctx, y, text, alpha) {
-        ctx.globalAlpha = alpha;
-        ctx.fillText(text, 6, y);
-        ctx.globalAlpha = 1;
-      }
-      const forumLines = [
+      var forumLines = [
         ['> New Post: "Best method to stay happy?"', 1.0],
-        ['  ↳ user1: Great question!', 0.75],
-        ['  ↳ user2: KYS!', 0.75],
-        ['  ↳ user3: +1 to that approach!', 0.75],
+        ['  \u21b3 user1: Great question!', 0.75],
+        ['  \u21b3 user2: KYS!', 0.75],
+        ['  \u21b3 user3: +1 to that approach!', 0.75],
         ['> Another Post: "Hey Siri"', 1.0],
-        ['  ↳ mentor1: Phat no', 0.75],
+        ['  \u21b3 mentor1: Phat no', 0.75],
       ];
       function animateForum(ctx, w, h, progress) {
         ctx.clearRect(0, 0, w, h);
-        const isDark = document.body.classList.contains('dark');
-        ctx.fillStyle = isDark ? 'rgba(91,133,246,0.28)' : 'rgba(58,108,244,0.18)';
         ctx.font = '10px monospace';
-        const lineH = 16;
-        const linesVisible = Math.floor(progress * forumLines.length);
-        forumLines.slice(0, linesVisible).forEach(function ([text, alpha], i) {
-          animateForumLine(ctx, 20 + i * lineH, text, alpha);
+        var lineH = 16;
+        var linesVisible = Math.floor(progress * forumLines.length);
+        forumLines.slice(0, linesVisible).forEach(function(pair, i) {
+          var text = pair[0], alpha = pair[1] * 0.22;
+          ctx.fillStyle = fillStyle(alpha);
+          ctx.globalAlpha = 1;
+          ctx.fillText(text, 6, 20 + i * lineH);
         });
       }
 
       // Chat card: alternating L/R messages
       function animateChat(ctx, w, h, progress) {
         ctx.clearRect(0, 0, w, h);
-        const isDark = document.body.classList.contains('dark');
-        ctx.fillStyle = isDark ? 'rgba(91,133,246,0.28)' : 'rgba(58,108,244,0.18)';
         ctx.font = '10px monospace';
-        const msgs = [
+        var msgs = [
           [true,  'Mày ngu'],
           [false, '?'],
           [true,  'Ngu'],
@@ -262,57 +258,56 @@
           [true,  'Ngu'],
           [false, 'Ngu'],
         ];
-        const visible = Math.min(Math.floor(progress * msgs.length) + 1, msgs.length);
-        msgs.slice(0, visible).forEach(function ([isLeft, text], i) {
-          const x = isLeft ? 6 : w - ctx.measureText(text).width - 6;
-          const prefix = isLeft ? '<< ' : '>> ';
-          ctx.fillText(prefix + text, isLeft ? 6 : w - ctx.measureText(prefix + text).width - 6, 18 + i * 15);
+        var visible = Math.min(Math.floor(progress * msgs.length) + 1, msgs.length);
+        msgs.slice(0, visible).forEach(function(pair, i) {
+          var isLeft = pair[0], text = pair[1];
+          ctx.fillStyle = fillStyle(0.22);
+          var prefix = isLeft ? '<< ' : '>> ';
+          var full = prefix + text;
+          var x = isLeft ? 6 : w - ctx.measureText(full).width - 6;
+          ctx.fillText(full, x, 18 + i * 15);
         });
       }
 
       // AI card: matrix-style falling chars
       function animateAI(ctx, w, h, time) {
         ctx.clearRect(0, 0, w, h);
-        const isDark = document.body.classList.contains('dark');
-        ctx.fillStyle = isDark ? 'rgba(91,133,246,0.28)' : 'rgba(58,108,244,0.18)';
         ctx.font = '11px monospace';
-        const cols = Math.floor(w / 10);
-        for (let c = 0; c < cols; c++) {
-          const offset = (c * 3 + Math.floor(time / 80)) % Math.floor(h / 13);
-          const chars = '01アイウエオ#%$';
-          for (let r = 0; r < 3; r++) {
-            const ch = chars[(c + r + Math.floor(time / 120)) % chars.length];
-            const alpha = 1 - r * 0.3;
-            ctx.globalAlpha = alpha;
+        var cols = Math.floor(w / 10);
+        var chars = '01\u30A2\u30A4\u30A6\u30A8\u30AA#%$';
+        for (var c = 0; c < cols; c++) {
+          var offset = (c * 3 + Math.floor(time / 80)) % Math.floor(h / 13);
+          for (var r = 0; r < 3; r++) {
+            var ch = chars[(c + r + Math.floor(time / 120)) % chars.length];
+            ctx.fillStyle = fillStyle((1 - r * 0.3) * 0.22);
             ctx.fillText(ch, c * 10, (offset + r) * 13 + 13);
           }
         }
-        ctx.globalAlpha = 1;
       }
 
       cards.forEach(function (canvas) {
-        const card = canvas.closest('.card');
-        const type = canvas.dataset.card;
-        let animFrame = null;
-        let progress = 0;
-        let startTime = null;
-        const DURATION = 1200; // ms for full animation
+        var card = canvas.closest('.card');
+        var type = canvas.dataset.card;
+        var animFrame = null;
+        var progress = 0;
+        var startTime = null;
+        var DURATION = 1200;
 
         function resize() {
-          canvas.width = card.offsetWidth;
+          canvas.width  = card.offsetWidth;
           canvas.height = card.offsetHeight;
         }
 
         function animate(ts) {
           if (!startTime) startTime = ts;
-          const elapsed = ts - startTime;
+          var elapsed = ts - startTime;
           progress = Math.min(elapsed / DURATION, 1);
-          const ctx = canvas.getContext('2d');
+          var ctx = canvas.getContext('2d');
           resize();
-          if (type === 'doc')   animateDoc(ctx, canvas.width, canvas.height, progress);
-          if (type === 'forum') animateForum(ctx, canvas.width, canvas.height, progress);
-          if (type === 'chat')  animateChat(ctx, canvas.width, canvas.height, progress);
-          if (type === 'ai')    animateAI(ctx, canvas.width, canvas.height, elapsed);
+          if (type === 'doc')   animateDoc(ctx,   canvas.width, canvas.height, progress);
+          if (type === 'forum') animateForum(ctx,  canvas.width, canvas.height, progress);
+          if (type === 'chat')  animateChat(ctx,   canvas.width, canvas.height, progress);
+          if (type === 'ai')    animateAI(ctx,     canvas.width, canvas.height, elapsed);
           if (type === 'ai' || progress < 1) animFrame = requestAnimationFrame(animate);
         }
 
@@ -323,50 +318,103 @@
         });
         card.addEventListener('mouseleave', function () {
           if (animFrame) cancelAnimationFrame(animFrame);
-          const ctx = canvas.getContext('2d');
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
         });
       });
     })();
 
-    // ── ASCII Wave at bottom ───────────────────────────────────────────────
+    // ── ASCII Background Wave (ReactBits-style) ────────────────────────────
     (function () {
-      const canvas = document.getElementById('wave-canvas');
+      var canvas = document.getElementById('ascii-bg-canvas');
       if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const WAVE_CHARS = '~-=≈∿∼~';
-      const CW = 9, CH = 13;
+      var ctx = canvas.getContext('2d');
+
+      // Characters sorted by visual density (space = empty, # = dense)
+      var ASCII_CHARS = ' .:-+*=%@#';
+      var CELL = 14; // px per character cell
+
+      var mouseX = -9999, mouseY = -9999;
+      var t = 0;
 
       function resize() {
-        canvas.width = canvas.offsetWidth;
-        canvas.height = 80;
+        var parent = canvas.parentElement;
+        canvas.width  = parent ? parent.offsetWidth  : window.innerWidth;
+        canvas.height = parent ? parent.offsetHeight : window.innerHeight;
       }
-      resize();
-      window.addEventListener('resize', resize);
 
-      let t = 0;
+      // 2D noise approximation via overlapping sines — produces flowing wave patterns
+      function noiseVal(col, row, time) {
+        var gx = col * 0.18, gy = row * 0.28;
+        // Wave tension & twist (matching ReactBits defaults)
+        var twist = 0.12 * Math.sin(gy * 0.5 + time * 0.25);
+        return (
+          Math.sin(gx * 0.55 + gy * 0.10 + time * 0.85 + twist) * 0.42 +
+          Math.sin(gx * 0.11 - gy * 0.38 - time * 0.52)          * 0.28 +
+          Math.sin((gx + gy) * 0.32 + time * 0.63)                * 0.18 +
+          Math.sin(gx * 0.78 - time * 0.38 + gy * 0.08)           * 0.12
+        ); // range ≈ -1 … +1
+      }
+
       function frame() {
-        const w = canvas.width, h = canvas.height;
-        ctx.clearRect(0, 0, w, h);
-        const isDark = document.body.classList.contains('dark');
-        ctx.fillStyle = isDark ? 'rgba(91,133,246,0.30)' : 'rgba(58,108,244,0.18)';
-        ctx.font = `bold ${CW + 1}px monospace`;
-        const cols = Math.floor(w / CW);
-        const rows = Math.floor(h / CH);
-        for (let c = 0; c < cols; c++) {
-          for (let r = 0; r < rows; r++) {
-            const wave = Math.sin((c / cols) * Math.PI * 6 + t + r * 0.5) * 0.5 + 0.5;
-            if (Math.random() > wave + 0.15) continue;
-            const charIdx = Math.floor((wave + t * 0.3) * WAVE_CHARS.length) % WAVE_CHARS.length;
-            ctx.globalAlpha = wave * 0.8 + 0.2;
-            ctx.fillText(WAVE_CHARS[charIdx], c * CW, r * CH + CH);
+        var W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        var rgb = getThemeRGB();
+        var cols = Math.floor(W / CELL);
+        var rows = Math.floor(H / CELL);
+
+        ctx.font      = (CELL - 1) + 'px monospace';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+
+        for (var row = 0; row < rows; row++) {
+          // Vertical fade: 0 at top (hero area), 1 at bottom
+          // Use a steeper power so the top 40% stays nearly invisible
+          var vertFade = Math.pow(row / rows, 1.4);
+          if (vertFade < 0.01) continue;
+
+          for (var col = 0; col < cols; col++) {
+            var px = col * CELL;
+            var py = row * CELL;
+
+            // Mouse ripple: boost noise near cursor
+            var dx = px - mouseX, dy = py - mouseY;
+            var distSq = dx * dx + dy * dy;
+            var mouseRipple = Math.exp(-distSq / 70000) * 0.45;
+
+            var n = noiseVal(col, row, t) + mouseRipple; // ≈ -1 … +1.45
+
+            // Map noise to character index
+            var charIdx = Math.floor(((n + 1) / 2.45) * (ASCII_CHARS.length - 1));
+            charIdx = Math.max(0, Math.min(ASCII_CHARS.length - 1, charIdx));
+            var ch = ASCII_CHARS[charIdx];
+            if (ch === ' ') continue;
+
+            // Alpha: vertical fade × character density
+            var density = charIdx / (ASCII_CHARS.length - 1);
+            var alpha = vertFade * (0.10 + density * 0.55);
+
+            ctx.fillStyle = 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + alpha.toFixed(3) + ')';
+            ctx.fillText(ch, px, py);
           }
         }
-        ctx.globalAlpha = 1;
-        t += 0.04;
+
+        t += 0.022;
         requestAnimationFrame(frame);
       }
-      frame();
+
+      // Allow one rAF for layout to settle before first render
+      requestAnimationFrame(function() {
+        resize();
+        window.addEventListener('resize', function() { resize(); });
+        document.addEventListener('mousemove', function(e) {
+          var rect = canvas.getBoundingClientRect();
+          mouseX = e.clientX - rect.left;
+          mouseY = e.clientY - rect.top;
+        });
+        document.addEventListener('mouseleave', function() { mouseX = -9999; mouseY = -9999; });
+        frame();
+      });
     })();
     </script>
   </body>

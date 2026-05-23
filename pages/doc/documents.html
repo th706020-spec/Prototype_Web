@@ -85,6 +85,10 @@
           <input id="up-field" type="text" placeholder="e.g. Computer Science, Marketing…">
         </div>
         <div class="form-group">
+          <label for="up-description">Description <span style="font-weight:400;color:var(--clr-muted)">(optional)</span></label>
+          <textarea id="up-description" rows="3" placeholder="Brief description of this document…" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--clr-border);border-radius:6px;background:var(--clr-bg);color:var(--clr-text);font-size:0.9rem;font-family:inherit"></textarea>
+        </div>
+        <div class="form-group">
           <label>File</label>
           <div class="drop-zone" id="drop-zone"
             onclick="document.getElementById('file-real').click()"
@@ -107,6 +111,51 @@
   </div>
 
   <div id="site-footer"></div>
+
+<!-- Edit Document Modal -->
+<div id="edit-doc-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Edit Document</h3>
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-doc-id">
+      <div class="form-group">
+        <label for="edit-doc-name">Name</label>
+        <input id="edit-doc-name" type="text">
+      </div>
+      <div class="form-group">
+        <label for="edit-doc-type">Document Type</label>
+        <select id="edit-doc-type">
+          <option>General</option>
+          <option>Research Paper</option>
+          <option>Lecture Notes</option>
+          <option>Lab Report</option>
+          <option>Thesis</option>
+          <option>Book</option>
+          <option>Presentation</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="edit-doc-field">Field / Subject</label>
+        <input id="edit-doc-field" type="text">
+      </div>
+      <div class="form-group">
+        <label for="edit-doc-univ">University / Institution</label>
+        <input id="edit-doc-univ" type="text">
+      </div>
+      <div class="form-group">
+        <label for="edit-doc-description">Description</label>
+        <textarea id="edit-doc-description" rows="3" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--clr-border);border-radius:6px;background:var(--clr-bg);color:var(--clr-text);font-size:0.9rem;font-family:inherit"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitEditDoc()">Save Changes</button>
+    </div>
+  </div>
+</div>
 
   <script src="../../js/config.js"></script>
   <script src="../../js/auth.js"></script>

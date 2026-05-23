@@ -242,14 +242,78 @@ document.addEventListener("DOMContentLoaded", async () => {
     }).join('');
   }
 
+  // Track the ID of the last rendered message to avoid full re-renders
+  let lastRenderedMsgId = null;
+  let renderedMsgIds = new Set();
+
   async function loadMessages() {
     if (!currentActiveUser) return;
     try {
       const res = await fetch(`${API}/messages/${encodeURIComponent(currentUser)}/${encodeURIComponent(currentActiveUser)}`);
-      const messages = await res.json();
+      const messages = res.ok ? await res.json() : [];
+      const msgArr = Array.isArray(messages) ? messages : [];
+
+      if (!msgArr.length) {
+        if (!renderedMsgIds.size) {
+          chatMessagesContainer.innerHTML = `<div class="msg-group-header">Start a new conversation</div>`;
+        }
+        return;
+      }
+
+      // Check if any new messages arrived
+      const newMsgs = msgArr.filter(m => !renderedMsgIds.has(m.id));
+      if (!newMsgs.length) return; // Nothing new — don't touch the DOM at all
+
+      // If this is the first load, do a full render
+      if (!renderedMsgIds.size) {
+        const peerAvatar = chatAvatarEl ? chatAvatarEl.src : avatarUrl(currentActiveUser);
+        const wasAtBottom = chatMessagesContainer.scrollHeight - chatMessagesContainer.scrollTop <= chatMessagesContainer.clientHeight + 60;
+        chatMessagesContainer.innerHTML = renderMessages(msgArr, peerAvatar);
+        msgArr.forEach(m => renderedMsgIds.add(m.id));
+        if (wasAtBottom) chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        return;
+      }
+
+      // Incremental: append only new messages
+      // But if the new message changes grouping of the last bubble, we need to patch the last group.
+      // Simple approach: re-render just the tail (last group + new messages) to preserve videos above.
       const peerAvatar = chatAvatarEl ? chatAvatarEl.src : avatarUrl(currentActiveUser);
-      const wasAtBottom = chatMessagesContainer.scrollHeight - chatMessagesContainer.scrollTop <= chatMessagesContainer.clientHeight + 60;
-      chatMessagesContainer.innerHTML = renderMessages(Array.isArray(messages) ? messages : [], peerAvatar);
+      const wasAtBottom = chatMessagesContainer.scrollHeight - chatMessagesContainer.scrollTop <= chatMessagesContainer.clientHeight + 80;
+
+      // Find the last rendered msg to see if new msgs continue its group
+      const lastOld = msgArr.find(m => m.id === lastRenderedMsgId);
+      const firstNew = newMsgs[0];
+      const sameGroup = lastOld && firstNew &&
+        lastOld.sender === firstNew.sender &&
+        new Date(firstNew.timestamp).getTime() - new Date(lastOld.timestamp).getTime() <= 10 * 60 * 1000;
+
+      if (sameGroup) {
+        // Remove the last msg-group element and re-render it merged with new msgs
+        const groups = chatMessagesContainer.querySelectorAll('.msg-group');
+        if (groups.length) groups[groups.length - 1].remove();
+        // Get all messages that belong to this group (from lastOld's group start) + new msgs
+        const groupStart = msgArr.findIndex(m => {
+          // Walk back from lastOld to find group start
+          const i = msgArr.indexOf(lastOld);
+          return m === msgArr[i];
+        });
+        // Simpler: just re-render entire last group's messages + new ones
+        const lastGroupMsgs = msgArr.filter(m =>
+          renderedMsgIds.has(m.id) &&
+          m.sender === lastOld.sender &&
+          new Date(lastOld.timestamp).getTime() - new Date(m.timestamp).getTime() <= 10 * 60 * 1000
+        );
+        const tailMsgs = [...lastGroupMsgs, ...newMsgs];
+        const tailHtml = renderMessages(tailMsgs, peerAvatar);
+        chatMessagesContainer.insertAdjacentHTML('beforeend', tailHtml);
+      } else {
+        // New group — just append
+        const appendHtml = renderMessages(newMsgs, peerAvatar);
+        chatMessagesContainer.insertAdjacentHTML('beforeend', appendHtml);
+      }
+
+      newMsgs.forEach(m => renderedMsgIds.add(m.id));
+      lastRenderedMsgId = msgArr[msgArr.length - 1].id;
       if (wasAtBottom) chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
     } catch {}
   }
@@ -261,6 +325,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function openChat(username, userAvatar) {
     currentActiveUser = username;
+    // Reset message tracking so fresh render happens for new peer
+    lastRenderedMsgId = null;
+    renderedMsgIds = new Set();
     if (chatAvatarEl) chatAvatarEl.src = userAvatar;
     if (chatNameEl) chatNameEl.textContent = username;
     if (chatStatusEl) chatStatusEl.textContent = "Loading...";
@@ -303,24 +370,60 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function sendFile(file) {
     if (!file || !currentActiveUser || !token) return;
+
+    const progressBar = document.getElementById('chat-upload-progress');
+    const progressFill = document.getElementById('chat-upload-fill');
+    const progressLabel = document.getElementById('chat-upload-label');
+
+    if (progressBar) {
+      progressBar.style.display = 'block';
+      progressFill.style.width = '0%';
+      progressLabel.textContent = `Uploading ${file.name}…`;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
     formData.append("receiver", currentActiveUser);
-    try {
-      await fetch(`${API}/messages/file`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+
+    return new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${API}/messages/file`);
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+      xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable && progressFill) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          progressFill.style.width = pct + '%';
+          if (progressLabel) progressLabel.textContent = `Uploading ${file.name}… ${pct}%`;
+        }
       });
-      await loadMessages();
-      await refreshConversations();
-    } catch {}
+
+      xhr.addEventListener("load", async () => {
+        if (progressBar) progressBar.style.display = 'none';
+        if (progressFill) progressFill.style.width = '0%';
+        await loadMessages();
+        await refreshConversations();
+        resolve();
+      });
+
+      xhr.addEventListener("error", () => {
+        if (progressBar) progressBar.style.display = 'none';
+        resolve();
+      });
+
+      xhr.send(formData);
+    });
   }
 
   // ===================== EVENT LISTENERS =====================
   if (sendBtn) sendBtn.addEventListener("click", sendMessage);
   if (chatInput) chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMessage(); });
-  if (fileInput) fileInput.addEventListener("change", (e) => { if (e.target.files[0]) sendFile(e.target.files[0]); });
+  if (fileInput) fileInput.addEventListener("change", async (e) => {
+    if (e.target.files[0]) {
+      await sendFile(e.target.files[0]);
+      e.target.value = ''; // Reset so same file can be sent again without duplicates
+    }
+  });
 
   // Click on conversation item (left sidebar)
   conversationListEl?.addEventListener("click", (e) => {

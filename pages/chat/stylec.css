@@ -584,3 +584,30 @@ button.chat-send-btn:hover {
   animation: status-appear 0.4s ease, pulse-online 2s ease-in-out infinite 0.4s;
 }
 
+/* ---- Upload progress bar ---- */
+.chat-upload-progress {
+  padding: 6px 16px 0;
+  flex-shrink: 0;
+}
+
+.chat-upload-label {
+  font-size: 12px;
+  color: var(--clr-muted);
+  margin-bottom: 4px;
+}
+
+.chat-upload-track {
+  height: 5px;
+  background: var(--clr-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.chat-upload-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--clr-primary);
+  border-radius: 4px;
+  transition: width 0.15s ease;
+}
+

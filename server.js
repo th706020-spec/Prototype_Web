@@ -67,7 +67,7 @@ const chatFileStorage = multer.diskStorage({
 });
 const uploadChatFile = multer({
   storage: chatFileStorage,
-  limits: { fileSize: 25 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024 },
 });
 
 app.use(cors());
@@ -110,6 +110,7 @@ db.serialize(() => {
   db.run("ALTER TABLE forum_posts ADD COLUMN type TEXT DEFAULT 'post'", () => {});
   db.run("ALTER TABLE notifications ADD COLUMN sender_name TEXT", () => {});
   db.run("ALTER TABLE notifications ADD COLUMN link_data TEXT", () => {});
+  db.run("ALTER TABLE documents ADD COLUMN description TEXT DEFAULT ''", () => {});
 
   db.run(`
     CREATE TABLE IF NOT EXISTS documents (
@@ -586,11 +587,12 @@ app.post("/api/docs/upload", upload.single("file"), (req, res) => {
   const field = req.body.field || "Tài liệu cá nhân";
   const doc_type = req.body.doc_type || "General";
   const univ = req.body.univ || "";
+  const description = req.body.description || "";
   const uploader = getUploader(req);
 
   db.run(
-    "INSERT INTO documents (name, filename, original_name, uploader, field, size, doc_type, univ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    [name, req.file.filename, req.file.originalname, uploader, field, req.file.size, doc_type, univ],
+    "INSERT INTO documents (name, filename, original_name, uploader, field, size, doc_type, univ, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [name, req.file.filename, req.file.originalname, uploader, field, req.file.size, doc_type, univ, description],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({
@@ -603,6 +605,7 @@ app.post("/api/docs/upload", upload.single("file"), (req, res) => {
         size: req.file.size,
         doc_type,
         univ,
+        description,
       });
     }
   );
@@ -624,12 +627,39 @@ app.delete("/api/docs/:id", requireAuth, (req, res) => {
   const { id } = req.params;
   db.get("SELECT * FROM documents WHERE id = ?", [id], (err, doc) => {
     if (err || !doc) return res.status(404).json({ error: "Document not found" });
+    // Allow: uploader OR admin role
+    if (doc.uploader !== req.user.username && req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Not authorized" });
+    }
     db.run("DELETE FROM documents WHERE id = ?", [id], (err2) => {
       if (err2) return res.status(500).json({ error: err2.message });
       const filePath = path.join(uploadsDir, doc.filename);
       fs.unlink(filePath, () => {}); // delete file, ignore errors
       res.json({ success: true });
     });
+  });
+});
+
+app.patch("/api/docs/:id", requireAuth, (req, res) => {
+  const { id } = req.params;
+  db.get("SELECT * FROM documents WHERE id = ?", [id], (err, doc) => {
+    if (err || !doc) return res.status(404).json({ error: "Document not found" });
+    if (doc.uploader !== req.user.username && req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const name = req.body.name || doc.name;
+    const doc_type = req.body.doc_type || doc.doc_type;
+    const field = req.body.field || doc.field;
+    const univ = req.body.univ !== undefined ? req.body.univ : doc.univ;
+    const description = req.body.description !== undefined ? req.body.description : doc.description;
+    db.run(
+      "UPDATE documents SET name=?, doc_type=?, field=?, univ=?, description=? WHERE id=?",
+      [name, doc_type, field, univ, description, id],
+      function(err2) {
+        if (err2) return res.status(500).json({ error: err2.message });
+        res.json({ success: true, name, doc_type, field, univ, description });
+      }
+    );
   });
 });
 
@@ -851,7 +881,7 @@ const uploadForumImage = multer({
       cb(null, "forum-" + Date.now() + ext);
     },
   }),
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = [
       ".jpg", ".jpeg", ".png", ".gif", ".webp",

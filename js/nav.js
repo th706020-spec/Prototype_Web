@@ -62,7 +62,7 @@
           </div>
 
           <div class="navbar-auth">
-            <button id="theme-toggle" class="btn btn-outline" title="Toggle theme">🌙</button>
+            <button id="theme-toggle" class="btn btn-outline" title="Cycle theme">🌙</button>
             ${user ? `
             <div class="nav-bell-wrapper" id="nav-bell-wrapper">
               <button class="nav-bell-btn" id="nav-bell" title="Notifications">🔔</button>
@@ -84,18 +84,35 @@
       if (link.href === window.location.href) link.classList.add("active");
     });
 
-    // Theme toggle
-    const themeBtn = document.getElementById("theme-toggle");
-    if (localStorage.getItem("theme") === "dark") {
-      document.body.classList.add("dark");
-      if (themeBtn) themeBtn.innerText = "☀️";
+    // ---- Multi-theme system ----
+    const THEMES = ['light', 'dark', 'gruvbox', 'sage', 'nord', 'tokyo'];
+    const THEME_ICONS = { light: '🌙', dark: '☀️', gruvbox: '🟤', sage: '🌿', nord: '❄️', tokyo: '🌸' };
+    const THEME_LABELS = { light: 'Light', dark: 'Dark', gruvbox: 'Gruvbox', sage: 'Sage', nord: 'Nord', tokyo: 'Tokyo Night' };
+
+    function applyTheme(theme) {
+      // Remove all theme classes
+      document.body.classList.remove('dark', 'theme-gruvbox', 'theme-sage', 'theme-nord', 'theme-tokyo');
+      if (theme === 'dark')    document.body.classList.add('dark');
+      else if (theme !== 'light') document.body.classList.add('theme-' + theme);
+      const btn = document.getElementById('theme-toggle');
+      if (btn) {
+        const nextIdx = (THEMES.indexOf(theme) + 1) % THEMES.length;
+        const nextTheme = THEMES[nextIdx];
+        btn.title = `Theme: ${THEME_LABELS[theme]} → click for ${THEME_LABELS[nextTheme]}`;
+        btn.innerText = THEME_ICONS[theme] || '🌙';
+      }
+      localStorage.setItem('theme', theme);
     }
+
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(savedTheme);
+
+    const themeBtn = document.getElementById('theme-toggle');
     if (themeBtn) {
-      themeBtn.addEventListener("click", function () {
-        document.body.classList.toggle("dark");
-        const isDark = document.body.classList.contains("dark");
-        themeBtn.innerText = isDark ? "☀️" : "🌙";
-        localStorage.setItem("theme", isDark ? "dark" : "light");
+      themeBtn.addEventListener('click', function() {
+        const cur = localStorage.getItem('theme') || 'light';
+        const nextIdx = (THEMES.indexOf(cur) + 1) % THEMES.length;
+        applyTheme(THEMES[nextIdx]);
       });
     }
 
@@ -552,16 +569,13 @@
   // --- bfcache fix: re-apply theme on back/forward restore ---
   window.addEventListener("pageshow", function(e) {
     if (e.persisted) {
-      const saved = localStorage.getItem("theme");
-      if (saved === "dark") {
-        document.body.classList.add("dark");
-        const btn = document.getElementById("theme-toggle");
-        if (btn) btn.innerText = "☀️";
-      } else {
-        document.body.classList.remove("dark");
-        const btn = document.getElementById("theme-toggle");
-        if (btn) btn.innerText = "🌙";
-      }
+      const saved = localStorage.getItem("theme") || "light";
+      document.body.classList.remove("dark", "theme-gruvbox", "theme-sage", "theme-nord", "theme-tokyo");
+      if (saved === "dark") document.body.classList.add("dark");
+      else if (saved !== "light") document.body.classList.add("theme-" + saved);
+      const btn = document.getElementById("theme-toggle");
+      const icons = { light: '🌙', dark: '☀️', gruvbox: '🟤', sage: '🌿', nord: '❄️', tokyo: '🌸' };
+      if (btn) btn.innerText = icons[saved] || '🌙';
     }
   });
 

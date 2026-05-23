@@ -7,6 +7,15 @@ let currentView = 'list';
 let currentType = 'all';
 let currentDate = '';
 
+function currentUser() {
+  return window.Auth ? window.Auth.getUser() : null;
+}
+
+function canEditDoc(d) {
+  const u = currentUser();
+  return u && (u.username === d.uploader || u.role === 'admin');
+}
+
 // ===== FILE TYPE ICON =====
 function fileIcon(filename) {
   if (!filename) return '📁';
@@ -123,6 +132,10 @@ function renderList(list) {
     const name = safeAttr(d.name || d.title);
     const orig = safeAttr(d.original_name);
     const fname = safeAttr(d.filename);
+    const ownerBtns = canEditDoc(d) ? `
+      <button class="btn-edit" onclick="openEditModal(${d.id})" title="Edit">✏️</button>
+      <button class="btn-del"  onclick="deleteDoc(${d.id}, '${name}')" title="Delete">🗑</button>
+    ` : '';
     return `
     <div class="doc-item">
       <div style="flex:1">
@@ -133,6 +146,7 @@ function renderList(list) {
         </div>
         <h4 class="doc-title" onclick="viewDocument(${d.id},'${fname}','${name}','${orig}')">${d.name || d.title}</h4>
         ${d.univ ? `<p class="doc-univ">${d.univ}</p>` : ''}
+        ${d.description ? `<p class="doc-description">${d.description}</p>` : ''}
         <div class="doc-footer">
           ${d.field ? `<span>${d.field}</span>` : ''}
           ${size  ? `<span>${size}</span>`  : ''}
@@ -144,6 +158,7 @@ function renderList(list) {
           <button class="btn-view" onclick="viewDocument(${d.id},'${fname}','${name}','${orig}')">👁 View</button>
           <button class="btn-dl"   onclick="downloadDoc('${fname}','${orig}')">⬇ Download</button>
         ` : ''}
+        ${ownerBtns}
       </div>
     </div>`;
   }).join('');
@@ -167,6 +182,10 @@ function renderGrid(list) {
     const name = safeAttr(d.name || d.title);
     const orig = safeAttr(d.original_name);
     const fname = safeAttr(d.filename);
+    const ownerBtns = canEditDoc(d) ? `
+      <button class="btn-edit" onclick="openEditModal(${d.id})" title="Edit">✏️</button>
+      <button class="btn-del"  onclick="deleteDoc(${d.id}, '${name}')" title="Delete">🗑</button>
+    ` : '';
     return `
     <div class="doc-card-grid">
       <div class="card-file-icon">${icon}</div>
@@ -178,11 +197,13 @@ function renderGrid(list) {
         ${size       ? `<span>${size}</span>`        : ''}
         ${date       ? `<span>${date}</span>`        : ''}
       </div>
+      ${d.description ? `<p class="doc-description" style="font-size:12px;color:var(--clr-muted);margin:4px 0 0">${d.description}</p>` : ''}
       <div class="card-actions">
         ${d.filename ? `
           <button class="btn-view" onclick="viewDocument(${d.id},'${fname}','${name}','${orig}')">👁 View</button>
           <button class="btn-dl"   onclick="downloadDoc('${fname}','${orig}')">⬇</button>
         ` : ''}
+        ${ownerBtns}
       </div>
     </div>`;
   }).join('');
@@ -204,10 +225,15 @@ function renderCompact(list) {
     const name = safeAttr(d.name || d.title);
     const orig = safeAttr(d.original_name);
     const fname = safeAttr(d.filename);
+    const ownerBtns = canEditDoc(d) ? `
+      <button class="btn-edit" onclick="event.stopPropagation();openEditModal(${d.id})" title="Edit">✏️</button>
+      <button class="btn-del"  onclick="event.stopPropagation();deleteDoc(${d.id}, '${name}')" title="Delete">🗑</button>
+    ` : '';
     return `
     <div class="doc-card-compact" onclick="viewDocument(${d.id},'${fname}','${name}','${orig}')">
       <span class="compact-icon">${icon}</span>
       <span class="compact-title">${d.name || d.title}</span>
+      <span style="margin-left:auto;display:flex;gap:4px">${ownerBtns}</span>
     </div>`;
   }).join('');
 }
@@ -242,7 +268,7 @@ function closeUpload() {
   const modal = document.getElementById('upload-modal');
   if (modal) modal.classList.remove('is-open');
   pendingFile = null;
-  ['up-name','up-univ','up-field'].forEach(id => {
+  ['up-name','up-univ','up-field','up-description'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -259,6 +285,7 @@ async function handleUploadSubmit() {
   const doc_type = document.getElementById('up-type')?.value || 'General';
   const univ  = document.getElementById('up-univ')?.value.trim() || '';
   const field = document.getElementById('up-field')?.value.trim() || '';
+  const description = document.getElementById('up-description')?.value.trim() || '';
 
   if (!name) { alert('Please enter a document title.'); return; }
   if (!pendingFile) { alert('Please select a file.'); return; }
@@ -273,6 +300,7 @@ async function handleUploadSubmit() {
     formData.append('doc_type', doc_type);
     formData.append('univ', univ);
     formData.append('field', field);
+    formData.append('description', description);
 
     const token = window.Auth ? window.Auth.getToken() : null;
     const headers = token ? { Authorization: 'Bearer ' + token } : {};
@@ -343,6 +371,69 @@ function viewDocument(id, filename, name, originalName) {
   }
 
   modal.style.display = 'flex';
+}
+
+// ===== DELETE DOC =====
+async function deleteDoc(id, name) {
+  if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  const token = window.Auth ? window.Auth.getToken() : null;
+  if (!token) { alert('Please sign in to delete documents.'); return; }
+  try {
+    await fetchJSON(`${API}/docs/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    await loadDocs();
+  } catch (err) {
+    alert('Delete failed: ' + err.message);
+  }
+}
+
+// ===== EDIT DOC MODAL =====
+function openEditModal(id) {
+  const doc = docs.find(d => d.id === id);
+  if (!doc) return;
+  document.getElementById('edit-doc-id').value = id;
+  document.getElementById('edit-doc-name').value = doc.name || doc.title || '';
+  document.getElementById('edit-doc-field').value = doc.field || '';
+  document.getElementById('edit-doc-univ').value = doc.univ || '';
+  document.getElementById('edit-doc-description').value = doc.description || '';
+  const typeEl = document.getElementById('edit-doc-type');
+  if (typeEl) {
+    const opt = [...typeEl.options].find(o => o.value === doc.doc_type);
+    if (opt) typeEl.value = doc.doc_type;
+    else typeEl.value = 'General';
+  }
+  const modal = document.getElementById('edit-doc-modal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeEditModal() {
+  const modal = document.getElementById('edit-doc-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function submitEditDoc() {
+  const id = document.getElementById('edit-doc-id').value;
+  const name = document.getElementById('edit-doc-name').value.trim();
+  const doc_type = document.getElementById('edit-doc-type').value;
+  const field = document.getElementById('edit-doc-field').value.trim();
+  const univ = document.getElementById('edit-doc-univ').value.trim();
+  const description = document.getElementById('edit-doc-description').value.trim();
+  if (!name) { alert('Name cannot be empty.'); return; }
+  const token = window.Auth ? window.Auth.getToken() : null;
+  if (!token) { alert('Please sign in.'); return; }
+  try {
+    await fetchJSON(`${API}/docs/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ name, doc_type, field, univ, description })
+    });
+    closeEditModal();
+    await loadDocs();
+  } catch (err) {
+    alert('Update failed: ' + err.message);
+  }
 }
 
 // ===== CLOSE UPLOAD MODAL ON OVERLAY CLICK (nav.js also handles this) =====
