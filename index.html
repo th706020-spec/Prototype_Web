@@ -58,6 +58,7 @@
             class="card"
             aria-label="Go to Documents"
           >
+            <canvas class="card-ascii-canvas" data-card="doc"></canvas>
             <div class="card-icon" aria-hidden="true">:3</div>
             <div class="card-title">Documents</div>
             <p class="card-desc">Xem tải và phân tích các tài liệu or sum</p>
@@ -69,6 +70,7 @@
             class="card"
             aria-label="Go to Forum"
           >
+            <canvas class="card-ascii-canvas" data-card="forum"></canvas>
             <div class="card-icon" aria-hidden="true">:3</div>
             <div class="card-title">Forum</div>
             <p class="card-desc">Thảo luận, hỏi đáp và chia sẻ kiến thức yay</p>
@@ -80,6 +82,7 @@
             class="card"
             aria-label="Go to Connects"
           >
+            <canvas class="card-ascii-canvas" data-card="chat"></canvas>
             <div class="card-icon" aria-hidden="true">:3</div>
             <div class="card-title">Connects</div>
             <p class="card-desc">
@@ -90,6 +93,7 @@
           </a>
 
           <a href="pages/AIs/" class="card" aria-label="AI Tools">
+            <canvas class="card-ascii-canvas" data-card="ai"></canvas>
             <div class="card-icon" aria-hidden="true">🤖</div>
             <div class="card-title">AI Tools</div>
             <p class="card-desc">Công cụ AI hỗ trợ nghiên cứu — kiểm tra đạo văn, tóm tắt, trích dẫn</p>
@@ -97,6 +101,8 @@
           </a>
         </div>
       </section>
+
+      <canvas id="wave-canvas" aria-hidden="true"></canvas>
     </main>
 
     <div id="site-footer"></div>
@@ -131,7 +137,7 @@
         ctx.clearRect(0, 0, W, H);
 
         const isDark = document.body.classList.contains('dark');
-        ctx.fillStyle = isDark ? 'rgba(100,140,255,0.22)' : 'rgba(58,108,244,0.13)';
+        ctx.fillStyle = isDark ? 'rgba(100,140,255,0.32)' : 'rgba(58,108,244,0.20)';
         ctx.font = `bold ${CHAR_W + 2}px monospace`;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
@@ -192,6 +198,174 @@
         requestAnimationFrame(frame);
       }
 
+      frame();
+    })();
+
+    // ── Card hover ASCII animations ────────────────────────────────────────
+    (function () {
+      const cards = document.querySelectorAll('.card-ascii-canvas');
+
+      // Doc card: characters being typed left-to-right top-to-bottom
+      function animateDoc(ctx, w, h, progress) {
+        ctx.clearRect(0, 0, w, h);
+        const isDark = document.body.classList.contains('dark');
+        ctx.fillStyle = isDark ? 'rgba(91,133,246,0.28)' : 'rgba(58,108,244,0.18)';
+        ctx.font = '11px monospace';
+        const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,;:?!-_';
+        const cw = 9, ch = 14;
+        const cols = Math.floor(w / cw), rows = Math.floor(h / ch);
+        const total = cols * rows;
+        const filled = Math.floor(total * Math.min(progress, 1));
+        for (let i = 0; i < filled; i++) {
+          const c = i % cols, r = Math.floor(i / cols);
+          ctx.fillText(charset[(i * 7 + Math.floor(progress * 100)) % charset.length], c * cw + 2, r * ch + ch);
+        }
+      }
+
+      // Forum card: post text then comments appearing
+      function animateForumLine(ctx, y, text, alpha) {
+        ctx.globalAlpha = alpha;
+        ctx.fillText(text, 6, y);
+        ctx.globalAlpha = 1;
+      }
+      const forumLines = [
+        ['> New Post: "Best method to stay happy?"', 1.0],
+        ['  ↳ user1: Great question!', 0.75],
+        ['  ↳ user2: KYS!', 0.75],
+        ['  ↳ user3: +1 to that approach!', 0.75],
+        ['> Another Post: "Hey Siri"', 1.0],
+        ['  ↳ mentor1: Phat no', 0.75],
+      ];
+      function animateForum(ctx, w, h, progress) {
+        ctx.clearRect(0, 0, w, h);
+        const isDark = document.body.classList.contains('dark');
+        ctx.fillStyle = isDark ? 'rgba(91,133,246,0.28)' : 'rgba(58,108,244,0.18)';
+        ctx.font = '10px monospace';
+        const lineH = 16;
+        const linesVisible = Math.floor(progress * forumLines.length);
+        forumLines.slice(0, linesVisible).forEach(function ([text, alpha], i) {
+          animateForumLine(ctx, 20 + i * lineH, text, alpha);
+        });
+      }
+
+      // Chat card: alternating L/R messages
+      function animateChat(ctx, w, h, progress) {
+        ctx.clearRect(0, 0, w, h);
+        const isDark = document.body.classList.contains('dark');
+        ctx.fillStyle = isDark ? 'rgba(91,133,246,0.28)' : 'rgba(58,108,244,0.18)';
+        ctx.font = '10px monospace';
+        const msgs = [
+          [true,  'Mày ngu'],
+          [false, '?'],
+          [true,  'Ngu'],
+          [false, 'Địt mẹ mày!'],
+          [true,  'Ngu'],
+          [false, 'Ngu'],
+        ];
+        const visible = Math.min(Math.floor(progress * msgs.length) + 1, msgs.length);
+        msgs.slice(0, visible).forEach(function ([isLeft, text], i) {
+          const x = isLeft ? 6 : w - ctx.measureText(text).width - 6;
+          const prefix = isLeft ? '<< ' : '>> ';
+          ctx.fillText(prefix + text, isLeft ? 6 : w - ctx.measureText(prefix + text).width - 6, 18 + i * 15);
+        });
+      }
+
+      // AI card: matrix-style falling chars
+      function animateAI(ctx, w, h, time) {
+        ctx.clearRect(0, 0, w, h);
+        const isDark = document.body.classList.contains('dark');
+        ctx.fillStyle = isDark ? 'rgba(91,133,246,0.28)' : 'rgba(58,108,244,0.18)';
+        ctx.font = '11px monospace';
+        const cols = Math.floor(w / 10);
+        for (let c = 0; c < cols; c++) {
+          const offset = (c * 3 + Math.floor(time / 80)) % Math.floor(h / 13);
+          const chars = '01アイウエオ#%$';
+          for (let r = 0; r < 3; r++) {
+            const ch = chars[(c + r + Math.floor(time / 120)) % chars.length];
+            const alpha = 1 - r * 0.3;
+            ctx.globalAlpha = alpha;
+            ctx.fillText(ch, c * 10, (offset + r) * 13 + 13);
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      cards.forEach(function (canvas) {
+        const card = canvas.closest('.card');
+        const type = canvas.dataset.card;
+        let animFrame = null;
+        let progress = 0;
+        let startTime = null;
+        const DURATION = 1200; // ms for full animation
+
+        function resize() {
+          canvas.width = card.offsetWidth;
+          canvas.height = card.offsetHeight;
+        }
+
+        function animate(ts) {
+          if (!startTime) startTime = ts;
+          const elapsed = ts - startTime;
+          progress = Math.min(elapsed / DURATION, 1);
+          const ctx = canvas.getContext('2d');
+          resize();
+          if (type === 'doc')   animateDoc(ctx, canvas.width, canvas.height, progress);
+          if (type === 'forum') animateForum(ctx, canvas.width, canvas.height, progress);
+          if (type === 'chat')  animateChat(ctx, canvas.width, canvas.height, progress);
+          if (type === 'ai')    animateAI(ctx, canvas.width, canvas.height, elapsed);
+          if (type === 'ai' || progress < 1) animFrame = requestAnimationFrame(animate);
+        }
+
+        card.addEventListener('mouseenter', function () {
+          startTime = null; progress = 0;
+          if (animFrame) cancelAnimationFrame(animFrame);
+          animFrame = requestAnimationFrame(animate);
+        });
+        card.addEventListener('mouseleave', function () {
+          if (animFrame) cancelAnimationFrame(animFrame);
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+      });
+    })();
+
+    // ── ASCII Wave at bottom ───────────────────────────────────────────────
+    (function () {
+      const canvas = document.getElementById('wave-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const WAVE_CHARS = '~-=≈∿∼~';
+      const CW = 9, CH = 13;
+
+      function resize() {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = 80;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      let t = 0;
+      function frame() {
+        const w = canvas.width, h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+        const isDark = document.body.classList.contains('dark');
+        ctx.fillStyle = isDark ? 'rgba(91,133,246,0.30)' : 'rgba(58,108,244,0.18)';
+        ctx.font = `bold ${CW + 1}px monospace`;
+        const cols = Math.floor(w / CW);
+        const rows = Math.floor(h / CH);
+        for (let c = 0; c < cols; c++) {
+          for (let r = 0; r < rows; r++) {
+            const wave = Math.sin((c / cols) * Math.PI * 6 + t + r * 0.5) * 0.5 + 0.5;
+            if (Math.random() > wave + 0.15) continue;
+            const charIdx = Math.floor((wave + t * 0.3) * WAVE_CHARS.length) % WAVE_CHARS.length;
+            ctx.globalAlpha = wave * 0.8 + 0.2;
+            ctx.fillText(WAVE_CHARS[charIdx], c * CW, r * CH + CH);
+          }
+        }
+        ctx.globalAlpha = 1;
+        t += 0.04;
+        requestAnimationFrame(frame);
+      }
       frame();
     })();
     </script>

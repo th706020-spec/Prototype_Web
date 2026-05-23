@@ -1,7 +1,10 @@
 (function () {
   // --- Base path (depth-aware) ---
   const segments = window.location.pathname.split("/").filter(Boolean);
-  const depth = segments.length - 1;
+  // If the last segment has no dot, it's a directory (e.g. /pages/AIs/) not a file
+  const lastSeg = segments[segments.length - 1] || "";
+  const isFile = lastSeg.includes(".");
+  const depth = isFile ? segments.length - 1 : segments.length;
   const base = depth > 0 ? "../".repeat(depth) : "";
 
   const API = window.AppConfig.API;
@@ -583,25 +586,98 @@
     const notifList = document.getElementById("nav-notif-list");
     const bellDropdown = document.getElementById("nav-bell-dropdown");
 
+    // --- Toast notification system ---
+    // Inject toast container once
+    if (!document.getElementById("toast-container")) {
+      const tc = document.createElement("div");
+      tc.id = "toast-container";
+      document.body.appendChild(tc);
+    }
+    const toastContainer = document.getElementById("toast-container");
+    let lastNotifId = null;
+    const shownToastIds = new Set();
+
+    function showToast(notif) {
+      if (shownToastIds.has(notif.id)) return;
+      shownToastIds.add(notif.id);
+
+      const icon = notif.type === "message" ? "💬" : "🗨️";
+      const sender = notif.sender_name || "Someone";
+      const msg = notif.message || "";
+      let link = null;
+      try {
+        const ld = JSON.parse(notif.link_data || "{}");
+        if (ld.peer) link = `${base}pages/chat/connects.html?peer=${encodeURIComponent(ld.peer)}`;
+        else if (ld.post_id) link = `${base}pages/forum/forum.html?post=${ld.post_id}`;
+      } catch {}
+
+      const el = document.createElement("div");
+      el.className = "toast-notif";
+      el.innerHTML = `<span class="toast-icon">${icon}</span>
+        <div class="toast-body">
+          <div class="toast-sender">${sender}</div>
+          <div class="toast-msg">${msg}</div>
+        </div>
+        <button class="toast-close" aria-label="Dismiss">&times;</button>`;
+
+      if (link) el.addEventListener("click", function(e) {
+        if (e.target.classList.contains("toast-close")) return;
+        window.location.href = link;
+      });
+      el.querySelector(".toast-close").addEventListener("click", function(e) {
+        e.stopPropagation();
+        dismissToast(el);
+      });
+
+      toastContainer.appendChild(el);
+      // Force reflow then animate in
+      requestAnimationFrame(function() { el.classList.add("show"); });
+
+      const timer = setTimeout(function() { dismissToast(el); }, 7000);
+      el._dismissTimer = timer;
+
+      // Keep max 3 toasts
+      const toasts = toastContainer.querySelectorAll(".toast-notif");
+      if (toasts.length > 3) dismissToast(toasts[0]);
+    }
+
+    function dismissToast(el) {
+      clearTimeout(el._dismissTimer);
+      el.classList.remove("show");
+      el.classList.add("hide");
+      el.addEventListener("transitionend", function() { el.remove(); }, { once: true });
+    }
+
     async function fetchNotifications() {
       try {
         const token = window.Auth.getToken();
         const r = await fetch(`${API}/notifications`, { headers: { Authorization: "Bearer " + token } });
         if (!r.ok) return;
         const items = await r.json();
-        const unread = items.filter(function(n) { return !n.read; }).length;
+        const unread = items.filter(function(n) { return !n.read; });
+        const unreadCount = unread.length;
         if (badgeEl) {
-          badgeEl.textContent = unread > 9 ? "9+" : String(unread);
-          badgeEl.style.display = unread > 0 ? "flex" : "none";
+          badgeEl.textContent = unreadCount > 9 ? "9+" : String(unreadCount);
+          badgeEl.style.display = unreadCount > 0 ? "flex" : "none";
         }
+        // Show toasts for new unread notifications (not yet shown)
+        unread.forEach(function(n) { showToast(n); });
+
         if (notifList) {
           notifList.innerHTML = items.length
             ? items.slice(0, 10).map(function(n) {
                 const icon = n.type === "message" ? "💬" : "🗨️";
-                return `<div class="nav-notif-item${n.read ? "" : " unread"}">
+                let link = null;
+                try {
+                  const ld = JSON.parse(n.link_data || "{}");
+                  if (ld.peer) link = `${base}pages/chat/connects.html?peer=${encodeURIComponent(ld.peer)}`;
+                  else if (ld.post_id) link = `${base}pages/forum/forum.html?post=${ld.post_id}`;
+                } catch {}
+                const clickAttr = link ? `style="cursor:pointer" onclick="window.location.href='${link}'"` : "";
+                return `<div class="nav-notif-item${n.read ? "" : " unread"}" ${clickAttr}>
                   <span class="nav-notif-icon">${icon}</span>
                   <div class="nav-notif-body">
-                    <p>${n.message}</p>
+                    <p><strong>${n.sender_name || ""}</strong>: ${n.message}</p>
                     <span class="nav-notif-time">${new Date(n.created_at).toLocaleString()}</span>
                   </div>
                 </div>`;

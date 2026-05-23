@@ -10,24 +10,33 @@
   <body>
     <div id="site-nav"></div>
 
-    <div class="layout-container">
-      <main class="main-workspace">
+    <div class="chat-layout">
 
+      <!-- LEFT SIDEBAR: conversation list -->
+      <aside class="chat-left-sidebar">
+        <div class="chat-left-header">
+          <h3>Messages</h3>
+        </div>
+        <div id="conversation-list" class="conversation-list">
+          <div class="sidebar-loading">Loading...</div>
+        </div>
+      </aside>
+
+      <!-- CENTER: main chat area -->
+      <main class="chat-main">
         <div id="no-chat-selected" class="chat-empty-state">
           <div class="chat-empty-icon">💬</div>
-          <h3>Select a member to start chatting</h3>
-          <p>Choose someone from the list on the right.</p>
+          <h3>Select a conversation</h3>
+          <p>Choose someone from the left to start chatting.</p>
         </div>
 
         <div id="active-chat" class="chat-container" style="display:none">
           <div class="chat-header">
             <div class="chat-header-left">
               <div class="chat-header-avatar-wrapper">
-                <img
-                  id="chat-header-avatar"
+                <img id="chat-header-avatar"
                   src="https://ui-avatars.com/api/?name=?&background=aaa&color=fff"
-                  alt="Avatar"
-                />
+                  alt="Avatar" />
                 <span class="chat-header-active-dot"></span>
               </div>
               <div class="chat-header-info">
@@ -58,77 +67,22 @@
         </div>
       </main>
 
-      <div class="right-sidebar">
-        <div id="sidebar-main-view">
-          <div class="profile-header">
-            <div class="profile-avatar-wrapper">
-              <img
-                class="profile-avatar"
-                  src="https://ui-avatars.com/api/?name=User&background=5b85f6&color=fff"
-                  alt="Profile"
-              />
-              <span class="active-status"></span>
-            </div>
-              <h2 class="profile-name">—</h2>
-              <span class="profile-title">Member</span>
-          </div>
-
-          <div class="action-bar">
-            <a href="../../pages/premium/premium.html" class="action-btn btn-premium">
-              <span class="btn-text">⭐ Premium</span>
-            </a>
-          </div>
-
-          <div class="messenger-section">
-            <div class="section-header">
-              <h3>Recent Chats</h3>
-            </div>
-            <div id="conversation-rows">
-              <div style="padding:12px;color:var(--clr-muted);font-size:13px">Loading...</div>
-            </div>
-          </div>
-
-          <div class="messenger-section">
-            <div class="section-header">
-              <h3>Thành viên</h3>
-              <a href="#" id="btn-view-all-members">Xem tất cả</a>
-            </div>
-            <div id="member-rows">
-              <div style="padding:12px;color:var(--clr-muted);font-size:13px">Đang tải...</div>
-            </div>
-          </div>
-
-          <div class="messenger-section">
-            <div class="section-header">
-              <h3>Kết nối Mentor</h3>
-              <a href="#" id="btn-view-all-mentors">Xem tất cả</a>
-            </div>
-            <div id="mentor-rows">
-              <div style="padding:12px;color:var(--clr-muted);font-size:13px">Đang tải...</div>
-            </div>
-            <button class="find-mentor-btn" id="btn-find-mentor">
-              Tìm mentor phù hợp
-            </button>
-          </div>
+      <!-- RIGHT SIDEBAR: member list (Discord-style) -->
+      <aside class="chat-right-sidebar">
+        <div class="members-list-container">
+          <div id="members-by-role"></div>
         </div>
-
-        <div id="sidebar-list-view" style="display: none">
-          <div class="list-view-header">
-            <svg id="btn-back-sidebar" viewBox="0 0 24 24">
-              <path
-                d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"
-              />
-            </svg>
-            <h3 id="list-view-title">Danh sách</h3>
-          </div>
-          <div id="list-view-content" class="messenger-section"></div>
+        <div class="find-mentor-sticky">
+          <button class="find-mentor-btn" id="btn-find-mentor">
+            🎓 Find a Mentor
+          </button>
         </div>
-      </div>
+      </aside>
     </div>
 
   <script src="../../js/config.js"></script>
   <script src="../../js/auth.js"></script>
   <script src="../../js/nav.js"></script>
-    <script src="navc.js"></script>
+  <script src="navc.js"></script>
   </body>
 </html>

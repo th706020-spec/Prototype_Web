@@ -97,6 +97,22 @@
       </table>
     </div>
 
+    <!-- Admin Secret Key Section -->
+    <div class="premium-compare" style="margin-top:32px; border-top: 1px solid var(--clr-border); padding-top: 32px;">
+      <h2 class="premium-compare-title">🔑 Admin Access</h2>
+      <p style="color:var(--clr-muted);font-size:0.9rem;margin-bottom:16px;">
+        Enter the administrator secret key to gain admin privileges.
+      </p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:1;min-width:200px">
+          <label style="font-size:0.82rem;color:var(--clr-muted);margin-bottom:4px;display:block;">Admin Secret Key</label>
+          <input type="password" id="admin-key-input" class="forum-input" placeholder="Enter admin key..." style="width:100%;font-size:0.9rem;">
+        </div>
+        <button class="btn btn-outline" id="admin-key-btn">Apply Key</button>
+      </div>
+      <p id="admin-key-msg" hidden style="margin-top:10px;font-size:0.85rem"></p>
+    </div>
+
   </main>
 
   <div id="site-footer"></div>
@@ -193,6 +209,41 @@
     }
 
     updatePremiumPageState();
+
+    // Admin key handler
+    const adminKeyBtn = document.getElementById("admin-key-btn");
+    if (adminKeyBtn) {
+      adminKeyBtn.addEventListener("click", async function () {
+        const user = window.Auth && window.Auth.getUser();
+        if (!user) { alert("Please log in first."); return; }
+        const adminKey = (document.getElementById("admin-key-input")?.value || "").trim();
+        if (!adminKey) { alert("Please enter the admin key."); return; }
+        const msgEl = document.getElementById("admin-key-msg");
+        adminKeyBtn.disabled = true;
+        adminKeyBtn.textContent = "Applying...";
+        try {
+          const token = window.Auth.getToken();
+          const res = await fetch(`${API}/auth/set-role`, {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ role: "admin", adminKey }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Invalid key");
+          window.Auth.saveToken(data.token);
+          msgEl.textContent = "✅ Admin role granted! Reloading...";
+          msgEl.style.color = "#22c55e";
+          msgEl.hidden = false;
+          setTimeout(() => window.location.reload(), 1500);
+        } catch (err) {
+          msgEl.textContent = "❌ " + err.message;
+          msgEl.style.color = "#dc2626";
+          msgEl.hidden = false;
+          adminKeyBtn.disabled = false;
+          adminKeyBtn.textContent = "Apply Key";
+        }
+      });
+    }
   </script>
 </body>
 </html>

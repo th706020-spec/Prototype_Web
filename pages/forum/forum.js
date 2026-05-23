@@ -651,10 +651,22 @@ function generatePostHTML(post, isThreadView = false) {
 
   let attachmentHTML = '';
   if (canView && post.image_url) {
-    // Server-stored image
-    attachmentHTML = `<img src="${post.image_url}" class="card-image" alt="Image">`;
+    // Server-stored file — detect type by extension
+    const url = post.image_url;
+    const ext = url.split('?')[0].split('.').pop().toLowerCase();
+    const imgExts = ['jpg','jpeg','png','gif','webp','svg'];
+    const vidExts = ['mp4','webm','mov','ogg'];
+    if (imgExts.includes(ext)) {
+      attachmentHTML = `<img src="${url}" class="card-image" alt="Image" style="cursor:pointer" onclick="window.open(this.src,'_blank')">`;
+    } else if (vidExts.includes(ext)) {
+      attachmentHTML = `<video src="${url}" class="card-image" controls style="max-width:100%;border-radius:8px"></video>`;
+    } else {
+      const fileName = url.split('/').pop();
+      attachmentHTML = `<a href="${url}" download="${fileName}" class="file-attachment">📎 ${fileName}</a>`;
+    }
   } else if (canView && post.fileData) {
     if (post.fileType && post.fileType.startsWith('image/')) attachmentHTML = `<img src="${post.fileData}" class="card-image" alt="Đính kèm">`;
+    else if (post.fileType && post.fileType.startsWith('video/')) attachmentHTML = `<video src="${post.fileData}" class="card-image" controls style="max-width:100%;border-radius:8px"></video>`;
     else attachmentHTML = `<a href="${post.fileData}" download="${post.fileName}" class="file-attachment"> <span>Tải xuống: ${post.fileName}</span></a>`;
   }
 

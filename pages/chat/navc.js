@@ -1,24 +1,16 @@
 document.addEventListener("DOMContentLoaded", async () => {
   const API = window.AppConfig.API;
-
   const authUser = window.Auth ? window.Auth.getUser() : null;
   const currentUser = authUser ? authUser.username : "Guest";
   const token = window.Auth ? window.Auth.getToken() : null;
 
+  // Cached avatar for current user
+  const cachedAvatar = localStorage.getItem("protocol_avatar_url");
   function avatarUrl(username, stored) {
     if (stored) return stored;
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=5b85f6&color=fff`;
   }
-
-  const currentUserAvatar = avatarUrl(currentUser);
-
-  // Update profile card
-  const profileAvatar = document.querySelector(".profile-avatar");
-  const profileName   = document.querySelector(".profile-name");
-  const profileTitle  = document.querySelector(".profile-title");
-  if (profileAvatar) profileAvatar.src = currentUserAvatar;
-  if (profileName)   profileName.textContent = currentUser;
-  if (profileTitle)  profileTitle.textContent = authUser?.tier === "premium" ? "Premium Member" : "Member";
+  const currentUserAvatar = avatarUrl(currentUser, cachedAvatar);
 
   // DOM refs
   const activeChatEl          = document.getElementById("active-chat");
@@ -30,78 +22,234 @@ document.addEventListener("DOMContentLoaded", async () => {
   const chatInput             = document.getElementById("chat-text-input");
   const sendBtn               = document.getElementById("chat-send-btn");
   const fileInput             = document.getElementById("chat-file-input");
-  const sidebarMainView       = document.getElementById("sidebar-main-view");
-  const sidebarListView       = document.getElementById("sidebar-list-view");
-  const btnBackSidebar        = document.getElementById("btn-back-sidebar");
-  const listViewTitle         = document.getElementById("list-view-title");
-  const listViewContent       = document.getElementById("list-view-content");
-  const btnViewAllMembers     = document.getElementById("btn-view-all-members");
-  const btnViewAllMentors     = document.getElementById("btn-view-all-mentors");
+  const conversationListEl    = document.getElementById("conversation-list");
+  const membersByRoleEl       = document.getElementById("members-by-role");
   const btnFindMentor         = document.getElementById("btn-find-mentor");
-  const memberRowsEl          = document.getElementById("member-rows");
-  const mentorRowsEl          = document.getElementById("mentor-rows");
-
-  const conversationRowsEl = document.getElementById("conversation-rows");
 
   let currentActiveUser = null;
   let pollInterval = null;
   let onlineRefreshInterval = null;
+  // Track previous online state for animation
+  let prevOnlineState = {};
 
-  // Fetch users (online only)
-  async function fetchUsers() {
+  // ===================== CONVERSATIONS (left sidebar) =====================
+  async function refreshConversations() {
+    if (!conversationListEl || !token) return;
+    try {
+      const res = await fetch(`${API}/messages/conversations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const convs = await res.json();
+
+      // Fetch online status for conversation peers
+      const allUsers = await fetchAllUsers();
+      const onlineMap = {};
+      allUsers.forEach(u => { onlineMap[u.username] = u.is_online; });
+
+      if (!convs.length) {
+        conversationListEl.innerHTML = `<div class="sidebar-loading" style="font-size:12px">No conversations yet.<br>Click a member to start chatting.</div>`;
+        return;
+      }
+      conversationListEl.innerHTML = convs.map(c => {
+        const avatar = c.avatar_url || avatarUrl(c.peer);
+        const preview = c.last_message
+          ? (c.last_message.length > 36 ? c.last_message.slice(0, 36) + "…" : c.last_message)
+          : "Start a conversation";
+        const isOnline = onlineMap[c.peer] ? 'online' : '';
+        const isActive = c.peer === currentActiveUser ? 'active' : '';
+        return `<div class="conv-item ${isActive}" data-username="${c.peer}" data-avatar="${avatar}">
+          <div class="conv-avatar-wrap">
+            <img class="conv-avatar" src="${avatar}" alt="${c.peer}">
+            <span class="conv-status-dot ${isOnline}"></span>
+          </div>
+          <div class="conv-info">
+            <div class="conv-name">${c.peer}</div>
+            <div class="conv-preview">${preview}</div>
+          </div>
+        </div>`;
+      }).join("");
+    } catch {}
+  }
+
+  // ===================== MEMBER LIST (right sidebar, Discord-style) =====================
+  async function fetchAllUsers() {
     try {
       const res = await fetch(`${API}/users`);
       if (!res.ok) return [];
       return await res.json();
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   }
 
-  function buildMemberRow(user) {
+  function buildMemberItem(user, roleClass) {
     const avatar = avatarUrl(user.username, user.avatar_url);
-    const status = user.tier === "premium" ? "Premium Member" : "Member";
-    return `
-      <div class="messenger-row" data-username="${user.username}" data-avatar="${avatar}">
-        <div class="avatar-with-status">
-          <img class="row-avatar" src="${avatar}" alt="${user.username}">
-          <span class="status-dot"></span>
-        </div>
-        <div class="row-info">
-          <h4>${user.username}</h4>
-          <span>${status}</span>
-        </div>
-      </div>`;
+    const isOnline = user.is_online;
+    const wasOnline = prevOnlineState[user.username];
+    const justOnline = isOnline && !wasOnline ? 'just-online' : '';
+    const offlineCls = isOnline ? '' : 'offline';
+    return `<div class="member-item ${offlineCls} ${roleClass}" data-username="${user.username}" data-avatar="${avatar}">
+      <div class="member-avatar-wrap">
+        <img class="member-avatar" src="${avatar}" alt="${user.username}">
+        <span class="member-status-dot${isOnline ? ' online ' + justOnline : ''}"></span>
+      </div>
+      <div class="member-info">
+        <div class="member-name">${user.username}</div>
+        <div class="member-role-badge">${getRoleLabel(user)}</div>
+      </div>
+    </div>`;
   }
 
-  // Render message — handles file attachments
-  function renderMessage(msg, peerAvatar) {
-    const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  function getRoleLabel(user) {
+    const role = user.role || 'member';
+    const tier = user.tier || 'free';
+    if (role === 'admin') return 'Admin';
+    if (role === 'mentor') return 'Mentor';
+    if (role === 'mod') return 'Mod';
+    if (role === 'researcher') return 'Researcher';
+    if (tier === 'premium') return '⭐ Premium';
+    return 'Member';
+  }
+
+  function getRoleOrder(user) {
+    const role = user.role || 'member';
+    const tier = user.tier || 'free';
+    if (role === 'admin') return 0;
+    if (role === 'mentor') return 1;
+    if (role === 'mod') return 2;
+    if (role === 'researcher') return 3;
+    if (tier === 'premium') return 4;
+    return 5;
+  }
+
+  async function refreshMemberList() {
+    const allUsers = await fetchAllUsers();
+    const others = allUsers.filter(u => u.username !== currentUser);
+
+    const online = others.filter(u => u.is_online).sort((a, b) => getRoleOrder(a) - getRoleOrder(b));
+    const offline = others.filter(u => !u.is_online).sort((a, b) => getRoleOrder(a) - getRoleOrder(b));
+
+    const groups = [
+      { label: `Online — ${online.length}`, users: online },
+      { label: `Offline — ${offline.length}`, users: offline },
+    ];
+
+    if (membersByRoleEl) {
+      membersByRoleEl.innerHTML = groups.map(g => {
+        if (!g.users.length) return '';
+        return `<div class="role-group-header">${g.label}</div>` +
+          g.users.map(u => {
+            const roleClass = `role-${u.role || 'member'}`;
+            return buildMemberItem(u, roleClass);
+          }).join('');
+      }).join('');
+    }
+
+    // Update prev state
+    allUsers.forEach(u => { prevOnlineState[u.username] = u.is_online; });
+  }
+
+  // ===================== MESSAGES =====================
+
+  // Group messages within 10 minutes from same sender
+  function groupMessages(messages) {
+    const groups = [];
+    let currentGroup = null;
+    messages.forEach(msg => {
+      const ts = new Date(msg.timestamp).getTime();
+      if (
+        currentGroup &&
+        currentGroup.sender === msg.sender &&
+        ts - currentGroup.lastTs <= 10 * 60 * 1000
+      ) {
+        currentGroup.messages.push(msg);
+        currentGroup.lastTs = ts;
+      } else {
+        if (currentGroup) groups.push(currentGroup);
+        currentGroup = { sender: msg.sender, firstTs: ts, lastTs: ts, messages: [msg] };
+      }
+    });
+    if (currentGroup) groups.push(currentGroup);
+    return groups;
+  }
+
+  function formatGroupTime(ts) {
+    const d = new Date(ts);
+    return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function formatExactTime(ts) {
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function isImageUrl(url) {
+    return /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(url);
+  }
+
+  function isVideoUrl(url) {
+    return /\.(mp4|webm|mov|ogg)(\?|$)/i.test(url);
+  }
+
+  function renderBubble(msg, peerAvatar, isSelf, hideAvatar) {
+    const exactTime = formatExactTime(msg.timestamp);
     const fileMatch = msg.content.match(/^\[file:(.+?):(.+?)\]$/);
-    let bubble;
+    let bubbleContent;
+
     if (fileMatch) {
       const [, fileName, fileUrl] = fileMatch;
-      bubble = `<a href="${fileUrl}" download="${fileName}" class="msg-file-link">[file] ${fileName}</a>`;
+      const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${API.replace('/api', '')}${fileUrl}`;
+      if (isImageUrl(fileUrl)) {
+        bubbleContent = `<img class="msg-media-img" src="${fullUrl}" alt="${fileName}" onclick="window.open(this.src,'_blank')">`;
+      } else if (isVideoUrl(fileUrl)) {
+        bubbleContent = `<video class="msg-media-video" src="${fullUrl}" controls></video>`;
+      } else {
+        bubbleContent = `<a href="${fullUrl}" download="${fileName}" class="msg-file-link">📎 ${fileName}</a>`;
+      }
     } else {
-      bubble = msg.content;
+      bubbleContent = msg.content;
     }
-    if (msg.sender === currentUser) {
-      return `<div class="msg-time">${time}</div><div class="msg-row msg-send"><div class="msg-content"><div class="msg-bubble primary-bubble">${bubble}</div></div></div>`;
+
+    if (isSelf) {
+      return `<div class="msg-row msg-send${hideAvatar ? ' hide-avatar' : ''}">
+        <div class="msg-content">
+          <div class="msg-bubble primary-bubble" data-time="${exactTime}">${bubbleContent}</div>
+        </div>
+      </div>`;
+    } else {
+      return `<div class="msg-row msg-receive${hideAvatar ? ' hide-avatar' : ''}">
+        <img class="msg-avatar" src="${peerAvatar}" alt="Avatar">
+        <div class="msg-content">
+          <div class="msg-bubble" data-time="${exactTime}">${bubbleContent}</div>
+        </div>
+      </div>`;
     }
-    return `<div class="msg-time">${time}</div><div class="msg-row msg-receive"><img class="msg-avatar" src="${peerAvatar}" alt="Avatar"><div class="msg-content"><div class="msg-bubble">${bubble}</div></div></div>`;
   }
 
-  // Load messages for active chat
+  function renderMessages(messages, peerAvatar) {
+    if (!messages.length) {
+      return `<div class="msg-group-header">Start a new conversation</div>`;
+    }
+    const groups = groupMessages(messages);
+    return groups.map(group => {
+      const isSelf = group.sender === currentUser;
+      const bubbles = group.messages.map((msg, idx) => {
+        const isLast = idx === group.messages.length - 1;
+        return renderBubble(msg, peerAvatar, isSelf, !isLast);
+      }).join('');
+      return `<div class="msg-group">
+        <div class="msg-group-header">${formatGroupTime(group.firstTs)}</div>
+        ${bubbles}
+      </div>`;
+    }).join('');
+  }
+
   async function loadMessages() {
     if (!currentActiveUser) return;
     try {
       const res = await fetch(`${API}/messages/${encodeURIComponent(currentUser)}/${encodeURIComponent(currentActiveUser)}`);
       const messages = await res.json();
-      const peerAvatar = chatAvatarEl ? chatAvatarEl.src : currentUserAvatar;
-      const wasAtBottom = chatMessagesContainer.scrollHeight - chatMessagesContainer.scrollTop <= chatMessagesContainer.clientHeight + 40;
-      chatMessagesContainer.innerHTML = messages.length
-        ? messages.map((m) => renderMessage(m, peerAvatar)).join("")
-        : '<div class="msg-time">Start a new conversation</div>';
+      const peerAvatar = chatAvatarEl ? chatAvatarEl.src : avatarUrl(currentActiveUser);
+      const wasAtBottom = chatMessagesContainer.scrollHeight - chatMessagesContainer.scrollTop <= chatMessagesContainer.clientHeight + 60;
+      chatMessagesContainer.innerHTML = renderMessages(Array.isArray(messages) ? messages : [], peerAvatar);
       if (wasAtBottom) chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
     } catch {}
   }
@@ -115,96 +263,35 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentActiveUser = username;
     if (chatAvatarEl) chatAvatarEl.src = userAvatar;
     if (chatNameEl) chatNameEl.textContent = username;
-    if (chatStatusEl) chatStatusEl.textContent = "Online";
+    if (chatStatusEl) chatStatusEl.textContent = "Loading...";
     if (noChatEl) noChatEl.style.display = "none";
     if (activeChatEl) activeChatEl.style.display = "flex";
+    // Update active state in conversation list
+    document.querySelectorAll('.conv-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.username === username);
+    });
     loadMessages();
     startPolling();
+    // Update status from member list
+    const allUserEls = document.querySelectorAll('.member-item');
+    allUserEls.forEach(el => {
+      if (el.dataset.username === username) {
+        const dot = el.querySelector('.member-status-dot');
+        if (chatStatusEl) chatStatusEl.textContent = dot && dot.classList.contains('online') ? 'Online' : 'Offline';
+      }
+    });
   }
 
-  // Build a conversation row (Messenger-style recent chat)
-  function buildConversationRow(conv) {
-    const avatar = conv.avatar_url
-      ? conv.avatar_url
-      : avatarUrl(conv.peer);
-    const preview = conv.last_message
-      ? (conv.last_message.length > 40 ? conv.last_message.slice(0, 40) + "…" : conv.last_message)
-      : "";
-    return `
-      <div class="messenger-row" data-username="${conv.peer}" data-avatar="${avatar}">
-        <div class="avatar-with-status">
-          <img class="row-avatar" src="${avatar}" alt="${conv.peer}">
-        </div>
-        <div class="row-info">
-          <h4>${conv.peer}</h4>
-          <span style="font-size:12px;color:var(--clr-muted)">${preview}</span>
-        </div>
-      </div>`;
-  }
-
-  // Fetch and render online member/mentor lists
-  async function refreshOnlineLists() {
-    const allUsers = await fetchUsers();
-    const onlineUsers = allUsers.filter((u) => u.username !== currentUser && u.is_online);
-    const onlineMembers = onlineUsers.filter((u) => u.tier !== "premium");
-    const onlineMentors = onlineUsers.filter((u) => u.tier === "premium");
-
-    if (memberRowsEl) {
-      memberRowsEl.innerHTML = onlineMembers.length
-        ? onlineMembers.slice(0, 3).map(buildMemberRow).join("")
-        : `<p style="padding:12px;color:var(--clr-muted);font-size:13px">No members online</p>`;
-    }
-    if (mentorRowsEl) {
-      mentorRowsEl.innerHTML = onlineMentors.length
-        ? onlineMentors.slice(0, 1).map(buildMemberRow).join("")
-        : `<p style="padding:12px;color:var(--clr-muted);font-size:13px">No mentors online</p>`;
-    }
-  }
-
-  // Fetch and render conversation history
-  async function refreshConversations() {
-    if (!conversationRowsEl || !token) return;
-    try {
-      const res = await fetch(`${API}/messages/conversations`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return;
-      const convs = await res.json();
-      conversationRowsEl.innerHTML = convs.length
-        ? convs.map(buildConversationRow).join("")
-        : `<p style="padding:12px;color:var(--clr-muted);font-size:13px">No conversations yet</p>`;
-    } catch {}
-  }
-
-  // Initial load
-  await refreshOnlineLists();
-  await refreshConversations();
-
-  // Auto-refresh online list every 15s
-  onlineRefreshInterval = setInterval(async () => {
-    await refreshOnlineLists();
-    await refreshConversations();
-  }, 15000);
-
-  // Click on member row
-  document.addEventListener("click", (e) => {
-    const row = e.target.closest(".messenger-row");
-    if (!row) return;
-    const username = row.dataset.username;
-    const avatar = row.dataset.avatar || currentUserAvatar;
-    if (username) openChat(username, avatar);
-  });
-
-  // Send text message
+  // ===================== SEND =====================
   async function sendMessage() {
     const text = chatInput ? chatInput.value.trim() : "";
-    if (!text || !currentActiveUser) return;
+    if (!text || !currentActiveUser || !token) return;
     try {
       await fetch(`${API}/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ receiver: currentActiveUser, content: text }),
       });
@@ -214,9 +301,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch {}
   }
 
-  // Send file
   async function sendFile(file) {
-    if (!file || !currentActiveUser) return;
+    if (!file || !currentActiveUser || !token) return;
     const formData = new FormData();
     formData.append("file", file);
     formData.append("receiver", currentActiveUser);
@@ -227,53 +313,49 @@ document.addEventListener("DOMContentLoaded", async () => {
         body: formData,
       });
       await loadMessages();
+      await refreshConversations();
     } catch {}
   }
 
+  // ===================== EVENT LISTENERS =====================
   if (sendBtn) sendBtn.addEventListener("click", sendMessage);
   if (chatInput) chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMessage(); });
   if (fileInput) fileInput.addEventListener("change", (e) => { if (e.target.files[0]) sendFile(e.target.files[0]); });
 
-  // Sidebar view switch
-  const switchToList = (title, contentHTML) => {
-    sidebarMainView.style.display = "none";
-    sidebarListView.style.display = "block";
-    listViewTitle.innerText = title;
-    listViewContent.innerHTML = contentHTML;
-  };
-
-  btnViewAllMembers?.addEventListener("click", async (e) => {
-    e.preventDefault();
-    const users = await fetchUsers();
-    const online = users.filter((u) => u.username !== currentUser && u.is_online && u.tier !== "premium");
-    switchToList(
-      "Online Members",
-      online.length ? online.map(buildMemberRow).join("") : `<p style="padding:16px;color:var(--clr-muted)">No members online</p>`
-    );
+  // Click on conversation item (left sidebar)
+  conversationListEl?.addEventListener("click", (e) => {
+    const item = e.target.closest(".conv-item");
+    if (!item) return;
+    const username = item.dataset.username;
+    const avatar = item.dataset.avatar || avatarUrl(username);
+    if (username) openChat(username, avatar);
   });
 
-  btnViewAllMentors?.addEventListener("click", async (e) => {
-    e.preventDefault();
-    const users = await fetchUsers();
-    const online = users.filter((u) => u.is_online && u.tier === "premium");
-    switchToList(
-      "Online Mentors",
-      online.length ? online.map(buildMemberRow).join("") : `<p style="padding:16px;color:var(--clr-muted)">No mentors online</p>`
-    );
+  // Click on member item (right sidebar)
+  membersByRoleEl?.addEventListener("click", (e) => {
+    const item = e.target.closest(".member-item");
+    if (!item) return;
+    const username = item.dataset.username;
+    const avatar = item.dataset.avatar || avatarUrl(username);
+    if (username) openChat(username, avatar);
   });
 
-  btnFindMentor?.addEventListener("click", async (e) => {
-    e.preventDefault();
-    const users = await fetchUsers();
-    const online = users.filter((u) => u.is_online && u.tier === "premium");
-    switchToList(
-      "Available Mentors",
-      online.length ? online.map(buildMemberRow).join("") : `<p style="padding:16px;color:var(--clr-muted)">No mentors online right now</p>`
-    );
+  // Find Mentor button
+  btnFindMentor?.addEventListener("click", () => {
+    // Scroll right sidebar to mentor section or highlight mentors
+    const mentorItems = membersByRoleEl?.querySelectorAll('.role-mentor');
+    if (mentorItems && mentorItems.length) {
+      mentorItems[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      alert("No mentors are available right now.");
+    }
   });
 
-  btnBackSidebar?.addEventListener("click", () => {
-    sidebarListView.style.display = "none";
-    sidebarMainView.style.display = "block";
-  });
+  // ===================== INIT =====================
+  await Promise.all([refreshConversations(), refreshMemberList()]);
+
+  onlineRefreshInterval = setInterval(async () => {
+    await refreshConversations();
+    await refreshMemberList();
+  }, 15000);
 });

@@ -108,6 +108,8 @@ db.serialize(() => {
   db.run("ALTER TABLE forum_posts ADD COLUMN image_url TEXT", () => {});
   db.run("ALTER TABLE forum_posts ADD COLUMN comment_count INTEGER DEFAULT 0", () => {});
   db.run("ALTER TABLE forum_posts ADD COLUMN type TEXT DEFAULT 'post'", () => {});
+  db.run("ALTER TABLE notifications ADD COLUMN sender_name TEXT", () => {});
+  db.run("ALTER TABLE notifications ADD COLUMN link_data TEXT", () => {});
 
   db.run(`
     CREATE TABLE IF NOT EXISTS documents (
@@ -207,6 +209,8 @@ db.serialize(() => {
       type TEXT NOT NULL,
       ref_id INTEGER,
       message TEXT NOT NULL,
+      sender_name TEXT,
+      link_data TEXT,
       read INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id)
@@ -506,8 +510,8 @@ app.post("/api/messages", requireAuth, (req, res) => {
     db.get("SELECT id FROM users WHERE username = ?", [receiver], (e, u) => {
       if (u) {
         db.run(
-          "INSERT INTO notifications (user_id, type, ref_id, message) VALUES (?, 'message', ?, ?)",
-          [u.id, msgId, `New message from ${sender}`]
+          "INSERT INTO notifications (user_id, type, ref_id, message, sender_name, link_data) VALUES (?, 'message', ?, ?, ?, ?)",
+          [u.id, msgId, content.length > 80 ? content.slice(0, 80) + "…" : content, sender, JSON.stringify({ peer: sender })]
         );
       }
     });
@@ -524,7 +528,7 @@ app.put("/api/users/heartbeat", requireAuth, (req, res) => {
 
 app.get("/api/users", (req, res) => {
   db.all(
-    `SELECT id, username, tier, avatar_url, created_at,
+    `SELECT id, username, tier, role, avatar_url, created_at,
       CASE WHEN last_seen > datetime('now', '-2 minutes') THEN 1 ELSE 0 END AS is_online
      FROM users ORDER BY username ASC`,
     (err, rows) => {
@@ -764,11 +768,11 @@ app.post("/api/forum/posts/:id/comments", requireAuth, (req, res) => {
         if (err2) return res.status(500).json({ error: err2.message });
         db.run("UPDATE forum_posts SET last_active = CURRENT_TIMESTAMP WHERE id = ?", [req.params.id]);
         // Notify post owner
-        db.get("SELECT author_id FROM forum_posts WHERE id = ?", [req.params.id], (e, post) => {
+        db.get("SELECT author_id, title FROM forum_posts WHERE id = ?", [req.params.id], (e, post) => {
           if (post && post.author_id !== author.id) {
             db.run(
-              "INSERT INTO notifications (user_id, type, ref_id, message) VALUES (?, 'comment', ?, ?)",
-              [post.author_id, req.params.id, `${author.username} commented on your post`]
+              "INSERT INTO notifications (user_id, type, ref_id, message, sender_name, link_data) VALUES (?, 'comment', ?, ?, ?, ?)",
+              [post.author_id, req.params.id, content.length > 80 ? content.slice(0, 80) + "…" : content, author.username, JSON.stringify({ post_id: req.params.id })]
             );
           }
         });
@@ -847,15 +851,19 @@ const uploadForumImage = multer({
       cb(null, "forum-" + Date.now() + ext);
     },
   }),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+    const allowed = [
+      ".jpg", ".jpeg", ".png", ".gif", ".webp",
+      ".mp4", ".webm", ".mov", ".ogg",
+      ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt",
+    ];
     cb(null, allowed.includes(path.extname(file.originalname).toLowerCase()));
   },
 });
 
 app.post("/api/forum/posts/:id/image", requireAuth, uploadForumImage.single("image"), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
   const imageUrl = "/uploads/forum/" + req.file.filename;
   db.run("UPDATE forum_posts SET image_url = ? WHERE id = ? AND author_id = ?", [imageUrl, req.params.id, req.user.id], function(err) {
     if (err) return res.status(500).json({ error: err.message });
