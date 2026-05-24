@@ -25,7 +25,7 @@
 
 .search-top-bar { background: var(--clr-surface); padding: 16px 20px; border-bottom: 1px solid var(--clr-border); display: flex; justify-content: center; position: static; }
 .search-container { display: flex; gap: 12px; width: 100%; max-width: 800px; }
-.search-input { flex: 1; border-radius: 99px !important; padding: 12px 24px !important; background: #f1f5f9 !important; border: none !important; }
+.search-input { flex: 1; border-radius: 99px !important; padding: 12px 24px !important; background: var(--clr-bg) !important; border: none !important; color: var(--clr-text) !important; }
 .create-btn { border-radius: 99px !important; padding: 0 24px !important; }
 
 /* MODAL */
@@ -41,12 +41,12 @@
 .discord-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); border-color: var(--clr-primary); }
 .card-tags { margin-bottom: 12px; }
 
-.tag-badge { background: #f1f5f9; color: #475569; font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 99px; display: inline-block; margin-right: 4px; border: 1px solid transparent; transition: all 0.2s ease; }
+.tag-badge { background: var(--clr-bg); color: var(--clr-muted); font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 99px; display: inline-block; margin-right: 4px; border: 1px solid var(--clr-border); transition: all 0.2s ease; }
 .tag-badge:hover { background: #e0e7ff; color: var(--clr-primary); border-color: var(--clr-primary); transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
 .card-title { font-size: 1.3rem; font-weight: 700; line-height: 1.3; margin-bottom: 8px; }
 .card-author { font-size: 0.9rem; color: var(--clr-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-.card-snippet { font-size: 1rem; color: #334155; line-height: 1.6; margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-snippet { font-size: 1rem; color: var(--clr-text); line-height: 1.6; margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .full-text { 
     display: block; 
     overflow: visible; 
@@ -55,7 +55,7 @@
     margin-bottom: 24px; 
 }
 .card-image { max-width: 100%; border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--clr-border); max-height: 500px; object-fit: cover; }
-.file-attachment { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; background: #f8fafc; border: 1px solid var(--clr-border); border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: var(--clr-primary); margin-bottom: 16px;}
+.file-attachment { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--clr-bg); border: 1px solid var(--clr-border); border-radius: 8px; font-size: 0.9rem; font-weight: 600; color: var(--clr-primary); margin-bottom: 16px;}
 
 .card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
 .action-group { display: flex; gap: 8px; }
@@ -71,18 +71,18 @@ img.comment-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: 
 .comment-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
 .comment-name { font-weight: 700; font-size: 1rem; color: var(--clr-text); }
 .comment-time { font-size: 0.8rem; color: var(--clr-muted); }
-.comment-text { font-size: 1.05rem; color: #334155; line-height: 1.6; }
+.comment-text { font-size: 1.05rem; color: var(--clr-text); line-height: 1.6; }
 
 .comment-input-area { display: flex; gap: 12px; border-top: 1px solid var(--clr-border); padding-top: 20px; }
 .comment-input-area input { padding: 14px 20px; font-size: 1.05rem; border-radius: 99px; }
 
-.comment-reply-snippet { font-size: 0.9rem; color: var(--clr-muted); background: #f8fafc; padding: 6px 12px; border-radius: 6px; border-left: 3px solid var(--clr-primary); margin-bottom: 8px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; position: relative; }
+.comment-reply-snippet { font-size: 0.9rem; color: var(--clr-muted); background: var(--clr-bg); padding: 6px 12px; border-radius: 6px; border-left: 3px solid var(--clr-primary); margin-bottom: 8px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; position: relative; }
 .comment-reply-snippet::before { content: "↳"; color: var(--clr-muted); font-weight: bold; margin-right: 4px; }
 .comment-actions { margin-top: 8px; font-size: 0.85rem; font-weight: 600; color: var(--clr-muted); }
 .comment-actions span { cursor: pointer; transition: color 0.2s; }
 .comment-actions span:hover { color: var(--clr-primary); text-decoration: underline; }
 
-.reply-indicator { display: none; align-items: center; justify-content: space-between; background: #eef1fb; padding: 10px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 0.9rem; font-weight: 600; color: var(--clr-primary); border-left: 4px solid var(--clr-primary); }
+.reply-indicator { display: none; align-items: center; justify-content: space-between; background: var(--clr-bg); padding: 10px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 0.9rem; font-weight: 600; color: var(--clr-primary); border-left: 4px solid var(--clr-primary); }
 .reply-indicator.active { display: flex; }
 .cancel-reply-btn { background: none; border: none; font-size: 1.1rem; color: var(--clr-muted); cursor: pointer; }
 .cancel-reply-btn:hover { color: #ef4444; }
@@ -165,24 +165,17 @@ img.comment-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: 
 
 .premium-badge { background: #fef08a; color: #854d0e; font-size: 0.72rem; padding: 2px 8px; border-radius: 6px; font-weight: 700; border: 1px solid #eab308; letter-spacing: 0.02em; }
 
-/* DARK MODE */
-body.dark .card-snippet { color: var(--clr-muted); }
-body.dark .comment-text { color: var(--clr-muted); }
-body.dark .tag-badge { background: #1e293b; color: #94a3b8; }
-body.dark .tag-badge:hover { background: #1e3a5f; color: var(--clr-primary); }
-body.dark .search-input { background: #1e293b !important; color: var(--clr-text) !important; }
-body.dark .file-attachment { background: #1e293b; }
-body.dark .comment-reply-snippet { background: #1e293b; }
-body.dark .reply-indicator { background: #1e3a5f; }
-body.dark .forum-btn.outline:hover { background: #1e293b; border-color: var(--clr-primary); color: var(--clr-primary); }
-body.dark .forum-btn.outline { border-color: #334155; color: var(--clr-text); }
-body.dark .vote-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
-body.dark .vote-btn:hover { background: #334155; border-color: var(--clr-primary); color: var(--clr-text); }
+/* DARK / ALL NON-LIGHT THEMES */
+body.dark .tag-badge:hover { background: var(--clr-card-hover); color: var(--clr-primary); }
+body.dark .forum-btn.outline:hover { background: var(--clr-card-hover); border-color: var(--clr-primary); color: var(--clr-primary); }
+body.dark .forum-btn.outline { border-color: var(--clr-border); color: var(--clr-text); }
+body.dark .vote-btn { background: var(--clr-bg); border-color: var(--clr-border); color: var(--clr-muted); }
+body.dark .vote-btn:hover { background: var(--clr-card-hover); border-color: var(--clr-primary); color: var(--clr-text); }
 body.dark .vote-btn.ghost { background: transparent; border-color: transparent; }
-body.dark .vote-btn.ghost:hover { background: #1e293b; border-color: #334155; }
-body.dark .forum-input { background: #1e293b; color: var(--clr-text); }
-body.dark .modal-content { background: #1e293b; }
-body.dark img.comment-avatar { background: #334155; border-color: #334155; }
+body.dark .vote-btn.ghost:hover { background: var(--clr-bg); border-color: var(--clr-border); }
+body.dark .forum-input { background: var(--clr-bg); color: var(--clr-text); }
+body.dark .modal-content { background: var(--clr-surface); }
+body.dark img.comment-avatar { background: var(--clr-border); border-color: var(--clr-border); }
 body.dark .vote-btn.active-up { background: rgba(34, 197, 94, 0.15); color: #4ade80; border-color: rgba(34, 197, 94, 0.4); }
 body.dark .vote-btn.active-down { background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.4); }
 body.dark .premium-badge { background: rgba(234, 179, 8, 0.15); color: #fde047; border-color: rgba(234, 179, 8, 0.3); }

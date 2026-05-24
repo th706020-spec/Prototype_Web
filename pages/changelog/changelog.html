@@ -10,6 +10,9 @@
 <body>
   <div id="site-nav"></div>
 
+  <!-- ASCII rain canvas background -->
+  <canvas id="cl-ascii-canvas"></canvas>
+
   <main class="cl-container">
     <div class="cl-hero">
       <h1 class="cl-title">📋 Changelog</h1>
@@ -18,14 +21,38 @@
 
     <div class="cl-timeline">
 
-      <!-- RC Batch HOTFIX 1.2 -->
+      <!-- RC Batch HOTFIX 1.3 -->
       <div class="cl-entry">
         <div class="cl-badge cl-badge--new">Latest</div>
         <div class="cl-card">
-          <div class="cl-card-header">
-            <h2 class="cl-version">RC Batch HOTFIX 1.2 — Real-time Notifications & Role Panel</h2>
-            <span class="cl-date">May 2026</span>
+          <div class="cl-date-top">May 25, 2026 · 20:00</div>
+          <h2 class="cl-version">RC Batch HOTFIX 1.3 — Delete/Recall, Theme Fix, Compression + Bonuses</h2>
+          <ul class="cl-list">
+            <li>🗑 <strong>Chat: Recall messages</strong> — right-click your own bubble → "Recall Message"; recalled messages show as 🚫 for both sides</li>
+            <li>🗑 <strong>Forum: Delete posts &amp; comments</strong> — owners, admins, and mods can delete their content with a trash button</li>
+            <li>🐛 <strong>Fixed ghost messages in Chat</strong> — old messages no longer reappear when a new message arrives in the same group</li>
+            <li>🐛 <strong>Fixed spam-send</strong> — pressing Enter or Send button multiple times now only sends one message</li>
+            <li>🎨 <strong>Fixed forum unreadable text on dark themes</strong> — all hardcoded colors replaced with CSS vars; works across all 10 themes</li>
+            <li>🎨 <strong>Changelog ASCII animation</strong> — matrix rain background added to this page</li>
+            <li>⚡ <strong>Image compression</strong> — uploaded images auto-compressed via <code>sharp</code> (80% quality, max 2000px)</li>
+            <li>🎨 <strong>Changelog redesign</strong> — date centered at top of card, contributor avatars shown outside card as a vertical list; ASCII rain now uses trail-fade and doesn't tint the background</li>
+            <li>🎨 <strong>Caffeine theme split</strong> — now two variants: ⬜ Caffeine White (white bg, black accent) and ⬛ Caffeine Black (pure black bg, off-white accent)</li>
+          </ul>
+        </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
           </div>
+        </div>
+      </div>
+
+      <!-- RC Batch HOTFIX 1.2 -->
+      <div class="cl-entry">
+        <div class="cl-badge">RC HF 1.2</div>
+        <div class="cl-card">
+          <div class="cl-date-top">May 24, 2026 · 12:21</div>
+          <h2 class="cl-version">RC Batch HOTFIX 1.2 — Real-time Notifications &amp; Role Panel</h2>
           <ul class="cl-list">
             <li>⚡ <strong>Real-time notifications</strong> — bell and toasts now poll every 8 seconds (vs. 30s), pausing when tab is in background</li>
             <li>🛡️ <strong>Admin/Mod pending requests panel</strong> — Admins and Mods can now see incoming role requests on the Roles page; Admins can approve or deny</li>
@@ -34,16 +61,20 @@
             <li>🐛 Fixed poll vote bar color hardcoded — unselected bars now use <code>var(--clr-muted)</code></li>
           </ul>
         </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
+          </div>
+        </div>
       </div>
 
       <!-- RC Batch HOTFIX 1.1 -->
       <div class="cl-entry">
-        <div class="cl-badge">RC Batch HOTFIX 1.1</div>
+        <div class="cl-badge">RC HF 1.1</div>
         <div class="cl-card">
-          <div class="cl-card-header">
-            <h2 class="cl-version">RC Batch HOTFIX 1.1 — Critical Bug Fixes</h2>
-            <span class="cl-date">May 2026</span>
-          </div>
+          <div class="cl-date-top">May 24, 2026 · 11:30</div>
+          <h2 class="cl-version">RC Batch HOTFIX 1.1 — Critical Bug Fixes</h2>
           <ul class="cl-list">
             <li>🐛 <strong>Fixed chat messages not loading at all</strong> — TypeError in <code>toUtcDate()</code> silently killed all message rendering</li>
             <li>🐛 Fixed mobile navbar: Home / Roles / About were completely inaccessible — added hamburger menu (☰) with slide-down drawer</li>
@@ -53,16 +84,20 @@
             <li>🐛 Fixed AI subpage card boxes still showing white on dark themes — cards now use global CSS vars directly</li>
           </ul>
         </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
+          </div>
+        </div>
       </div>
 
       <!-- RC Batch 1 -->
       <div class="cl-entry">
         <div class="cl-badge">RC Batch 1</div>
         <div class="cl-card">
-          <div class="cl-card-header">
-            <h2 class="cl-version">RC Batch 1 — UI/UX Improvements & Mobile Support</h2>
-            <span class="cl-date">May 2026</span>
-          </div>
+          <div class="cl-date-top">May 24, 2026 · 10:57</div>
+          <h2 class="cl-version">RC Batch 1 — UI/UX Improvements &amp; Mobile Support</h2>
           <ul class="cl-list">
             <li>✅ Full mobile responsiveness across all pages</li>
             <li>✅ Mobile Chat: slide-over sidebars with peek tabs</li>
@@ -76,16 +111,20 @@
             <li>✅ Server state revamp and code cleanup</li>
           </ul>
         </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
+          </div>
+        </div>
       </div>
 
       <!-- Test Batch 3 -->
       <div class="cl-entry">
-        <div class="cl-badge">Test Batch 3</div>
+        <div class="cl-badge">Test B3</div>
         <div class="cl-card">
-          <div class="cl-card-header">
-            <h2 class="cl-version">Test Batch 3 — UI Polish & Server Optimization</h2>
-            <span class="cl-date">May 2026</span>
-          </div>
+          <div class="cl-date-top">May 24, 2026 · 01:24</div>
+          <h2 class="cl-version">Test Batch 3 — UI Polish &amp; Server Optimization</h2>
           <ul class="cl-list">
             <li>✅ More UI improvements and visual refinements across pages</li>
             <li>✅ Stabilization pass — resolved inconsistencies and edge cases</li>
@@ -94,16 +133,20 @@
             <li>✅ Updated copilot instructions and project documentation</li>
           </ul>
         </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
+          </div>
+        </div>
       </div>
 
       <!-- Test Batch 2 -->
       <div class="cl-entry">
-        <div class="cl-badge">Test Batch 2</div>
+        <div class="cl-badge">Test B2</div>
         <div class="cl-card">
-          <div class="cl-card-header">
-            <h2 class="cl-version">Test Batch 2 — Chat Revamp & Notifications</h2>
-            <span class="cl-date">May 2026</span>
-          </div>
+          <div class="cl-date-top">May 23, 2026 · 23:22</div>
+          <h2 class="cl-version">Test Batch 2 — Chat Revamp &amp; Notifications</h2>
           <ul class="cl-list">
             <li>✅ Complete revamp of Chat layout and functions</li>
             <li>✅ New notification system — slide-in toasts with content preview</li>
@@ -113,16 +156,20 @@
             <li>✅ Various QoL improvements and visual enhancements</li>
           </ul>
         </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
+          </div>
+        </div>
       </div>
 
       <!-- Test Batch 1 -->
       <div class="cl-entry">
-        <div class="cl-badge">Test Batch 1</div>
+        <div class="cl-badge">Test B1</div>
         <div class="cl-card">
-          <div class="cl-card-header">
-            <h2 class="cl-version">Test Batch 1 — Roles, Premium & Real-time Updates</h2>
-            <span class="cl-date">May 2026</span>
-          </div>
+          <div class="cl-date-top">May 22, 2026 · 14:24</div>
+          <h2 class="cl-version">Test Batch 1 — Roles, Premium &amp; Real-time Updates</h2>
           <ul class="cl-list">
             <li>✅ Role system: Admin, Moderator, Mentor, Premium, Member</li>
             <li>✅ Premium lock on features, role-based access control</li>
@@ -132,16 +179,20 @@
             <li>✅ Forum vote spam protection</li>
           </ul>
         </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
+          </div>
+        </div>
       </div>
 
       <!-- Batch 10 -->
       <div class="cl-entry">
         <div class="cl-badge">Batch 10</div>
         <div class="cl-card">
-          <div class="cl-card-header">
-            <h2 class="cl-version">Batch 10 — Polish & More Themes</h2>
-            <span class="cl-date">May 2026</span>
-          </div>
+          <div class="cl-date-top">May 21, 2026 · 22:54</div>
+          <h2 class="cl-version">Batch 10 — Polish &amp; More Themes</h2>
           <ul class="cl-list">
             <li>✅ Added 4 new themes: <strong>Claude</strong>, <strong>Tide</strong>, <strong>Catppuccin Mocha</strong>, <strong>Caffeine</strong></li>
             <li>✅ Fixed AI subpage card/panel styling — now respects all themes using CSS variables</li>
@@ -151,16 +202,20 @@
             <li>✅ Mobile sidebar redesign — slide-over panels with close buttons</li>
           </ul>
         </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
+          </div>
+        </div>
       </div>
 
       <!-- Batch 9 -->
       <div class="cl-entry">
         <div class="cl-badge">Batch 9</div>
         <div class="cl-card">
-          <div class="cl-card-header">
-            <h2 class="cl-version">Batch 9 — Pre-Ship Sprint</h2>
-            <span class="cl-date">May 2026</span>
-          </div>
+          <div class="cl-date-top">May 21, 2026</div>
+          <h2 class="cl-version">Batch 9 — Pre-Ship Sprint</h2>
           <ul class="cl-list">
             <li>✅ Replaced theme cycle button with a 10-option theme dropdown</li>
             <li>✅ Single-open-at-a-time logic for all navbar dropdowns</li>
@@ -175,16 +230,20 @@
             <li>✅ Admin secret key added to .env</li>
           </ul>
         </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
+          </div>
+        </div>
       </div>
 
       <!-- Batch 8 -->
       <div class="cl-entry">
         <div class="cl-badge">Batch 8</div>
         <div class="cl-card">
-          <div class="cl-card-header">
-            <h2 class="cl-version">Batch 8 — Themes, Docs, ASCII</h2>
-            <span class="cl-date">May 2026</span>
-          </div>
+          <div class="cl-date-top">May 21, 2026</div>
+          <h2 class="cl-version">Batch 8 — Themes, Docs, ASCII</h2>
           <ul class="cl-list">
             <li>✅ Added 4 more themes: Gruvbox, Sage, Nord, Tokyo Night</li>
             <li>✅ ASCII animation colors adapt per theme</li>
@@ -197,23 +256,38 @@
             <li>✅ ASCII wave background added to bottom of index page</li>
           </ul>
         </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
+          </div>
+        </div>
       </div>
 
       <!-- Batch 7 -->
       <div class="cl-entry">
         <div class="cl-badge">Batch 7</div>
         <div class="cl-card">
-          <div class="cl-card-header">
-            <h2 class="cl-version">Batch 7 — UI Animations & Dark Mode</h2>
-            <span class="cl-date">May 2026</span>
-          </div>
+          <div class="cl-date-top">May 21, 2026</div>
+          <h2 class="cl-version">Batch 7 — UI Animations &amp; Dark Mode</h2>
           <ul class="cl-list">
             <li>✅ ASCII card hover animations on index page (Doc, Forum, Connect, AI Tools)</li>
             <li>✅ ASCII spinning donut improved — more visible, better colours</li>
             <li>✅ Dark mode: light/dark theme toggle now persists across all pages</li>
             <li>✅ Dark mode: doc preview no longer inherits dark background</li>
             <li>✅ Index footer polish — ASCII wave section</li>
+            <li>✅ AI Tools page updated by Huynh Le Nhat Huy</li>
           </ul>
+        </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
+          </div>
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: #e05252">H</div>
+            <span class="cl-contributor-name">Huynh Huy</span>
+          </div>
         </div>
       </div>
 
@@ -221,10 +295,8 @@
       <div class="cl-entry">
         <div class="cl-badge">Batch 6</div>
         <div class="cl-card">
-          <div class="cl-card-header">
-            <h2 class="cl-version">Batch 6 — Chat Overhaul & Notifications</h2>
-            <span class="cl-date">April 2026</span>
-          </div>
+          <div class="cl-date-top">May 20, 2026</div>
+          <h2 class="cl-version">Batch 6 — Chat Overhaul &amp; Notifications</h2>
           <ul class="cl-list">
             <li>✅ Chat: message grouping by 10-min windows (Messenger-style)</li>
             <li>✅ Chat: exact timestamp shown on hover</li>
@@ -236,16 +308,24 @@
             <li>✅ Online status tracked globally across all pages (not just Chat)</li>
           </ul>
         </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
+          </div>
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: #10b981">T</div>
+            <span class="cl-contributor-name">Huynh Trung</span>
+          </div>
+        </div>
       </div>
 
       <!-- Batch 5 -->
       <div class="cl-entry">
         <div class="cl-badge">Batch 5</div>
         <div class="cl-card">
-          <div class="cl-card-header">
-            <h2 class="cl-version">Batch 5 — Server Overhaul & Roles</h2>
-            <span class="cl-date">April 2026</span>
-          </div>
+          <div class="cl-date-top">May 20, 2026</div>
+          <h2 class="cl-version">Batch 5 — Server Overhaul &amp; Roles</h2>
           <ul class="cl-list">
             <li>✅ Premium locked behind payment flow (dev key bypass for testing)</li>
             <li>✅ Role system: member, premium, mentor, researcher, mod, admin</li>
@@ -257,7 +337,18 @@
             <li>✅ Forum: comment count now displays correctly</li>
             <li>✅ Forum: only OG poster + admins/mods can pin posts</li>
             <li>✅ Online presence tracked via heartbeat — updates in real time</li>
+            <li>✅ Documents UI contributed by Nhat Nguyen</li>
           </ul>
+        </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
+          </div>
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: #f59e0b">N</div>
+            <span class="cl-contributor-name">Nhat Nguyen</span>
+          </div>
         </div>
       </div>
 
@@ -265,10 +356,8 @@
       <div class="cl-entry">
         <div class="cl-badge">Batch 4</div>
         <div class="cl-card">
-          <div class="cl-card-header">
-            <h2 class="cl-version">Batch 4 — Dropdowns, Premium, Chat</h2>
-            <span class="cl-date">March 2026</span>
-          </div>
+          <div class="cl-date-top">May 21, 2026 · 22:54</div>
+          <h2 class="cl-version">Batch 4 — Dropdowns, Premium, Chat</h2>
           <ul class="cl-list">
             <li>✅ Navbar dropdown for user profile</li>
             <li>✅ Premium membership page with upgrade flow</li>
@@ -277,16 +366,20 @@
             <li>✅ Documentation updates</li>
           </ul>
         </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
+          </div>
+        </div>
       </div>
 
       <!-- Batch 1–3 -->
       <div class="cl-entry">
-        <div class="cl-badge">Batch 1–3</div>
+        <div class="cl-badge">B 1–3</div>
         <div class="cl-card">
-          <div class="cl-card-header">
-            <h2 class="cl-version">Batch 1–3 — Foundation</h2>
-            <span class="cl-date">Feb – Mar 2026</span>
-          </div>
+          <div class="cl-date-top">May 15, 2026 · 21:13</div>
+          <h2 class="cl-version">Batch 1–3 — Foundation</h2>
           <ul class="cl-list">
             <li>✅ Project scaffold — Node.js + Express backend, SQLite database</li>
             <li>✅ Auth system: registration, login, JWT sessions</li>
@@ -300,6 +393,12 @@
             <li>✅ Dark mode — toggle with localStorage persistence</li>
           </ul>
         </div>
+        <div class="cl-contributors">
+          <div class="cl-contributor">
+            <div class="cl-avatar" style="background: var(--clr-primary)">S</div>
+            <span class="cl-contributor-name">Spider</span>
+          </div>
+        </div>
       </div>
 
     </div><!-- /.cl-timeline -->
@@ -308,5 +407,60 @@
   <script src="../../js/config.js"></script>
   <script src="../../js/auth.js"></script>
   <script src="../../js/nav.js"></script>
+  <script>
+    // ── ASCII Matrix Rain ──────────────────────────────────────
+    (function() {
+      const canvas = document.getElementById('cl-ascii-canvas');
+      const ctx = canvas.getContext('2d');
+      const chars = 'PROTOCOL01アイウエオカキクケコサシスセソタチツテト∑∆∇∫∂≈≠≤≥abcdefghijklmnopqrstuvwxyz0123456789';
+      const FS = 14;
+      const TRAIL = 20;
+      let cols, drops, trails, animId;
+
+      function getColor() {
+        return getComputedStyle(document.body).getPropertyValue('--clr-primary').trim() || '#3a6cf4';
+      }
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        cols = Math.floor(canvas.width / FS);
+        drops = Array.from({ length: cols }, () => Math.floor(Math.random() * -(canvas.height / FS)));
+        trails = Array.from({ length: cols }, () => []);
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = `bold ${FS}px monospace`;
+        const color = getColor();
+
+        for (let i = 0; i < cols; i++) {
+          const ch = chars[Math.floor(Math.random() * chars.length)];
+          trails[i].push({ ch, y: drops[i] });
+          if (trails[i].length > TRAIL) trails[i].shift();
+
+          for (let j = 0; j < trails[i].length; j++) {
+            const progress = (j + 1) / trails[i].length; // 0=oldest → 1=head
+            ctx.globalAlpha = Math.pow(progress, 1.5) * 0.9;
+            ctx.fillStyle = color;
+            ctx.fillText(trails[i][j].ch, i * FS, trails[i][j].y * FS);
+          }
+
+          drops[i]++;
+          if (drops[i] * FS > canvas.height && Math.random() > 0.975) {
+            drops[i] = Math.floor(Math.random() * -30);
+            trails[i] = [];
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function loop() { animId = requestAnimationFrame(loop); draw(); }
+
+      resize();
+      window.addEventListener('resize', () => { cancelAnimationFrame(animId); resize(); loop(); });
+      loop();
+    })();
+  </script>
 </body>
 </html>

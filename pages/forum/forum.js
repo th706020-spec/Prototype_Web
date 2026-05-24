@@ -645,6 +645,10 @@ function generatePostHTML(post, isThreadView = false) {
     String(post.user_id) === String(authForPin.id) ||
     ['admin', 'mod'].includes(authForPin.role)
   );
+  const canDelete = authForPin && (
+    String(post.user_id) === String(authForPin.id) ||
+    ['admin', 'mod'].includes(authForPin.role)
+  );
   
   // Ẩn nội dung nếu không có quyền
   const contentSnippet = canView ? post.content : `<div style="padding: 12px; background: #f8fafc; border: 1px dashed var(--clr-border); border-radius: 8px; font-style: italic; color: #64748b; font-size: 0.95rem;"> Nội dung đã bị khóa. Tính năng xem giới hạn cho tài khoản Premium, bạn bè, hoặc người được cấp quyền.</div>`;
@@ -728,6 +732,7 @@ function generatePostHTML(post, isThreadView = false) {
           <button class="vote-btn ghost">💬 ${commentCount}</button>
         </div>
         ${canPin ? `<button class="vote-btn ghost" onclick="togglePin(${post.id})">${post.isPinned ? '📌 Bỏ Ghim' : '📌 Ghim bài'}</button>` : ''}
+        ${canDelete ? `<button class="vote-btn ghost" style="color:#ef4444;" onclick="deletePost(${post.id}, event)">🗑 Xóa</button>` : ''}
       </div>
     </div>
   `;
@@ -802,8 +807,14 @@ function renderThreadView() {
           replySnippetHTML = `<div class="comment-reply-snippet"><strong>@${parentComment.author}</strong>: ${snippetText}</div>`;
         }
       }
+      const authU = getAuthUser();
+      const canDelComment = authU && (
+        String(c.author_id) === String(authU.id) ||
+        c.author === authU.username ||
+        ['admin', 'mod'].includes(authU.role)
+      );
       return `
-      <div class="comment-item">
+      <div class="comment-item" data-comment-id="${c.id}">
         <img src="${c.authorAvatar || 'https://i.imgur.com/K3aDE8W.png'}" class="comment-avatar">
         <div class="comment-body">
           ${replySnippetHTML}
@@ -814,6 +825,7 @@ function renderThreadView() {
           <div class="comment-text">${c.text}</div>
           <div class="comment-actions">
             <span onclick="setReply(${c.id}, '${c.author}')">Trả lời</span>
+            ${canDelComment && c.source !== 'local-poll' ? `<span style="color:#ef4444; margin-left:8px;" onclick="deleteComment(${c.id}, ${post.id})">🗑 Xóa</span>` : ''}
           </div>
         </div>
       </div>
@@ -835,13 +847,58 @@ function cancelReply() {
   if(indicator) indicator.classList.remove('active');
 }
 
+async function deletePost(postId, e) {
+  if (e) e.stopPropagation();
+  if (!confirm('Bạn có chắc muốn xóa bài đăng này?')) return;
+  const post = posts.find(p => p.id === postId);
+  if (!post) return;
+  try {
+    if (post.source === 'local-poll') {
+      const idx = posts.findIndex(p => p.id === postId);
+      if (idx !== -1) posts.splice(idx, 1);
+      savePollPosts();
+    } else {
+      await fetchJSON(`${API}/forum/posts/${postId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(false)
+      });
+      posts = posts.filter(p => p.id !== postId);
+    }
+    closeThread();
+    renderPosts();
+  } catch (err) {
+    alert('Lỗi khi xóa bài: ' + err.message);
+  }
+}
+
+async function deleteComment(commentId, postId) {
+  if (!confirm('Xóa bình luận này?')) return;
+  const post = posts.find(p => p.id === postId);
+  if (!post) return;
+  try {
+    if (post.source === 'local-poll') {
+      post.comments = (post.comments || []).filter(c => c.id !== commentId);
+      savePollPosts();
+    } else {
+      await fetchJSON(`${API}/forum/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(false)
+      });
+      await fetchPostDetails(postId);
+    }
+    renderThreadView();
+  } catch (err) {
+    alert('Lỗi khi xóa bình luận: ' + err.message);
+  }
+}
+
 function filterOnly(type) {
   currentFilterType = type;
   
   // Highlight nút Tất cả bài
   const allBtn = document.getElementById('filter-btn-all-types');
   if(allBtn) {
-    if(type === 'all') allBtn.style.background = '#eef1fb';
+    if(type === 'all') allBtn.style.background = 'var(--clr-bg)';
     else allBtn.style.background = 'transparent';
   }
 

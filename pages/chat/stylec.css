@@ -479,6 +479,17 @@
 
 .primary-bubble .msg-file-link { color: #fff; }
 
+/* Recalled message */
+.msg-bubble.recalled {
+  opacity: 0.6;
+  font-style: italic;
+}
+.msg-recalled {
+  color: var(--clr-muted);
+  font-style: italic;
+  font-size: 0.9em;
+}
+
 /* Input area */
 .chat-input-wrapper {
   display: flex;

@@ -21,6 +21,7 @@
 | Database | SQLite3 (`sqlite3` npm package) |
 | Auth | JWT (`jsonwebtoken`), bcrypt (`bcryptjs`) |
 | File uploads | `multer` |
+| Image compression | `sharp` (80% JPEG quality, max 2000px — applied to chat & forum image uploads) |
 | Document parsing | `mammoth` (DOCX → HTML) |
 | Other | `cors`, `dotenv` |
 
@@ -36,7 +37,7 @@
 ├── connects.db             # SQLite database (git-ignored)
 ├── .env                    # JWT_SECRET, ADMIN_SECRET_KEY (git-ignored)
 ├── css/
-│   ├── style.css           # Global shared styles + CSS variable system (10 themes)
+│   ├── style.css           # Global shared styles + CSS variable system (11 themes)
 │   └── documents.css       # Document page styles
 ├── js/
 │   ├── config.js           # window.AppConfig.API — the only place to set the API base URL
@@ -78,7 +79,7 @@ Always use these variables — never hardcode colors for structural elements:
 | `--transition` | Default transition duration |
 
 ### Multi-Theme System (Batch 8–10)
-Protocol now supports **10 themes**:
+Protocol now supports **11 themes**:
 1. **Light** ☀️ — Blue accent `#3a6cf4`
 2. **Dark** 🌙 — Lighter blue `#5b85f6`
 3. **Gruvbox** 🟤 — Amber `#d79921`
@@ -88,21 +89,22 @@ Protocol now supports **10 themes**:
 7. **Claude** 🤖 — Warm cream/terracotta `#d97757`
 8. **Tide** 🌊 — Ocean teal `#4fc3c8`
 9. **Catppuccin Mocha** 🐱 — Pastel purple `#cba6f7`
-10. **Caffeine** ☕ — Dark amber `#e8a045`
+10. **Caffeine White** ⬜ — Monochrome light `#111111` accent on `#f8f8f8` bg
+11. **Caffeine Black** ⬛ — Monochrome dark `#e2e2e2` accent on `#0a0a0a` bg
 
 **Implementation:**
 - Theme name stored in `localStorage.getItem('theme')`
 - Body gets class: `theme-{name}` for non-light themes, `dark` for dark theme, nothing for light
 - Each theme has its own CSS `body.theme-{name}` block in `css/style.css` that overrides color vars
-- `nav.js` has `applyTheme(name)` function; theme dropdown (`#nav-theme-dropdown`) shows all 10 options
+- `nav.js` has `applyTheme(name)` function; theme dropdown (`#nav-theme-dropdown`) shows all 11 options
 - bfcache fix: `pageshow` event re-applies theme class to prevent revert on browser back/forward
-- Settings page (`pages/settings/settings.html`) has a `<select>` with all 10 theme options
+- Settings page (`pages/settings/settings.html`) has a `<select>` with all 11 theme options
 
 **ASCII animations** are **theme-aware**:
 - All inline scripts (donut, card hover, background wave) call `getThemeRGB()` helper
 - This reads the current theme and returns `[r, g, b]` for that theme's accent color
 - Animations update color in real-time when theme switches
-- `getThemeRGB()` in `index.html` has entries for all 10 themes
+- `getThemeRGB()` in `index.html` has entries for all 11 themes
 
 **When adding new UI components:**
 - Use CSS vars for colors
@@ -370,6 +372,35 @@ On screens ≤ 768px, both sidebars are hidden by default and revealed via peek 
 
 ---
 
+## 11.9. Chat Message Recall & Forum Delete (HOTFIX 1.3)
+
+### Chat Message Recall (Soft Delete)
+- `messages` table has a `recalled INTEGER DEFAULT 0` column (migrated via `ALTER TABLE ... ADD COLUMN` on server start)
+- `DELETE /api/messages/:id` — permission: own message OR admin/mod; sets `recalled=1`, `content='[recalled]'`
+- Client: `renderBubble()` checks `msg.recalled === 1` → renders `🚫 Recalled Message` (italic, muted)
+- Right-click context menu on own bubbles (`data-msg-id` attribute) calls `window._recallMsg(id)`
+- After recall: full re-render triggered (`renderedMsgIds = new Set()`) to update both sides
+
+### Image Compression (`compressImage()`)
+```js
+async function compressImage(filePath, mimeType) {
+  if (!sharp) return;  // sharp loaded with try/catch fallback
+  const imgMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (!imgMimes.includes(mimeType)) return;
+  const tmp = filePath + '.tmp';
+  await sharp(filePath).resize({ width: 2000, height: 2000, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 80 }).toFile(tmp);
+  fs.renameSync(tmp, filePath);
+}
+```
+Called in both `POST /api/messages/file` and `POST /api/forum/posts/:id/image` after multer saves the file.
+
+### Forum Delete Permissions
+- `DELETE /api/forum/posts/:id`: allowed if `req.user.username === post.author` OR `['admin','mod'].includes(req.user.role)`
+- `DELETE /api/forum/comments/:id`: allowed if `req.user.id === comment.author_id` OR `['admin','mod'].includes(req.user.role)`
+- Client: `canDelete` variable in `generatePostHTML()` — shows 🗑 only for eligible users
+
+---
+
 ## 12. Server Routes Reference
 
 | Method | Path | Auth | Description |
@@ -392,13 +423,16 @@ On screens ≤ 768px, both sidebars are hidden by default and revealed via peek 
 | GET | `/api/docs/:id/view` | No | View document inline |
 | GET | `/api/messages/:u1/:u2` | No | Get chat history |
 | POST | `/api/messages` | No | Send text message |
-| POST | `/api/messages/file` | Yes | Send file in chat |
+| POST | `/api/messages/file` | Yes | Send file in chat (images auto-compressed via sharp) |
+| DELETE | `/api/messages/:id` | Yes | Recall (soft-delete) a chat message — sets `recalled=1` |
 | GET | `/api/forum/posts` | No | List forum posts |
 | POST | `/api/forum/posts` | Yes | Create post |
 | GET | `/api/forum/posts/:id` | No | Get post + comments |
 | PUT | `/api/forum/posts/:id/vote` | Yes | Vote on post |
+| POST | `/api/forum/posts/:id/image` | Yes | Upload image attachment (auto-compressed via sharp) |
 | POST | `/api/forum/posts/:id/comments` | Yes | Add comment |
-| DELETE | `/api/forum/posts/:id` | Yes | Delete post |
+| DELETE | `/api/forum/posts/:id` | Yes | Delete post (author, admin, or mod) |
+| DELETE | `/api/forum/comments/:id` | Yes | Delete comment (author, admin, or mod) |
 
 ---
 
@@ -411,7 +445,7 @@ When adding any new UI component, verify:
 - [ ] A `body.dark` override block exists for any component using hardcoded colors
 - [ ] Inputs have dark background + light text in dark mode
 - [ ] New page-specific CSS files derive colors from global vars (see `ais.css` `:root` using `var(--clr-*)`)
-- [ ] ASCII/canvas colors call `getThemeRGB()` so all 10 themes are supported
+- [ ] ASCII/canvas colors call `getThemeRGB()` so all 11 themes are supported
 
 ---
 

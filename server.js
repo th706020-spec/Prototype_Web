@@ -9,6 +9,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const mammoth = require("mammoth");
+let sharp;
+try { sharp = require("sharp"); } catch (e) { sharp = null; }
 
 const app = express();
 const JWT_SECRET = process.env.JWT_SECRET || "change_this_secret";
@@ -82,9 +84,12 @@ db.serialize(() => {
       sender TEXT NOT NULL,
       receiver TEXT NOT NULL,
       content TEXT NOT NULL,
+      recalled INTEGER DEFAULT 0,
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  // Migration: add recalled column if missing (for existing DBs)
+  db.run("ALTER TABLE messages ADD COLUMN recalled INTEGER DEFAULT 0", () => {});
 
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
@@ -520,8 +525,24 @@ app.post("/api/messages", requireAuth, (req, res) => {
   });
 });
 
-app.put("/api/users/heartbeat", requireAuth, (req, res) => {
-  db.run("UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE id = ?", [req.user.id], (err) => {
+app.delete("/api/messages/:id", requireAuth, (req, res) => {
+  db.get("SELECT * FROM messages WHERE id = ?", [req.params.id], (err, msg) => {
+    if (err || !msg) return res.status(404).json({ error: "Message not found" });
+    if (msg.sender !== req.user.username && !['admin', 'mod'].includes(req.user.role)) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    db.run(
+      "UPDATE messages SET recalled = 1, content = '[recalled]' WHERE id = ?",
+      [req.params.id],
+      (err2) => {
+        if (err2) return res.status(500).json({ error: err2.message });
+        res.json({ success: true });
+      }
+    );
+  });
+});
+
+app.put("/api/users/heartbeat", requireAuth, (req, res) => {  db.run("UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE id = ?", [req.user.id], (err) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ ok: true });
   });
@@ -663,10 +684,27 @@ app.patch("/api/docs/:id", requireAuth, (req, res) => {
   });
 });
 
-app.post("/api/messages/file", requireAuth, uploadChatFile.single("file"), (req, res) => {
+// Helper: compress image with sharp if available
+async function compressImage(filePath, mimeType) {
+  if (!sharp) return;
+  const imgMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (!imgMimes.includes(mimeType)) return;
+  try {
+    const tmp = filePath + '.tmp';
+    await sharp(filePath)
+      .resize({ width: 2000, height: 2000, fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 80 })
+      .toFile(tmp);
+    fs.renameSync(tmp, filePath);
+  } catch (_) {}
+}
+
+app.post("/api/messages/file", requireAuth, uploadChatFile.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
   const { receiver } = req.body;
   if (!receiver) return res.status(400).json({ error: "receiver required" });
+  const filePath = req.file.path;
+  await compressImage(filePath, req.file.mimetype);
   const fileUrl = `/uploads/chat-files/${req.file.filename}`;
   const content = `[file:${req.file.originalname}:${fileUrl}]`;
   db.run(
@@ -812,7 +850,22 @@ app.post("/api/forum/posts/:id/comments", requireAuth, (req, res) => {
   });
 });
 
+app.delete("/api/forum/comments/:id", requireAuth, (req, res) => {
+  db.get("SELECT * FROM forum_comments WHERE id = ?", [req.params.id], (err, comment) => {
+    if (err || !comment) return res.status(404).json({ error: "Comment not found" });
+    if (comment.author_id !== req.user.id && !['admin', 'mod'].includes(req.user.role)) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    db.run("DELETE FROM forum_comments WHERE id = ?", [req.params.id], (err2) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      db.run("UPDATE forum_posts SET last_active = CURRENT_TIMESTAMP WHERE id = ?", [comment.post_id]);
+      res.json({ success: true });
+    });
+  });
+});
+
 // --- Forum polls ---
+
 app.post("/api/forum/polls", requireAuth, (req, res) => {
   const { post_id, question, options } = req.body;
   if (!post_id || !question || !Array.isArray(options) || options.length < 2) {
@@ -892,8 +945,9 @@ const uploadForumImage = multer({
   },
 });
 
-app.post("/api/forum/posts/:id/image", requireAuth, uploadForumImage.single("image"), (req, res) => {
+app.post("/api/forum/posts/:id/image", requireAuth, uploadForumImage.single("image"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+  await compressImage(req.file.path, req.file.mimetype);
   const imageUrl = "/uploads/forum/" + req.file.filename;
   db.run("UPDATE forum_posts SET image_url = ? WHERE id = ? AND author_id = ?", [imageUrl, req.params.id, req.user.id], function(err) {
     if (err) return res.status(500).json({ error: err.message });
@@ -905,7 +959,7 @@ app.post("/api/forum/posts/:id/image", requireAuth, uploadForumImage.single("ima
 app.delete("/api/forum/posts/:id", requireAuth, (req, res) => {
   db.get("SELECT * FROM forum_posts WHERE id = ?", [req.params.id], (err, post) => {
     if (err || !post) return res.status(404).json({ error: "Post not found" });
-    if (post.author_id !== req.user.id && req.user.tier !== "mentor") {
+    if (post.author_id !== req.user.id && !['admin', 'mod'].includes(req.user.role)) {
       return res.status(403).json({ error: "Not authorized" });
     }
     db.run("DELETE FROM forum_posts WHERE id = ?", [req.params.id], (err2) => {

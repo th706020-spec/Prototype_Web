@@ -99,7 +99,8 @@
                 <button class="nav-theme-option" data-theme="claude">🤖 Claude</button>
                 <button class="nav-theme-option" data-theme="tide">🌊 Tide</button>
                 <button class="nav-theme-option" data-theme="catppuccin">🐱 Catppuccin</button>
-                <button class="nav-theme-option" data-theme="caffeine">☕ Caffeine</button>
+                <button class="nav-theme-option" data-theme="caffeine-white">⬜ Caffeine White</button>
+                <button class="nav-theme-option" data-theme="caffeine-black">⬛ Caffeine Black</button>
               </div>
             </div>
             ${user ? `
@@ -160,13 +161,13 @@
     }
 
     // ---- Multi-theme system ----
-    const THEMES = ['light', 'dark', 'gruvbox', 'sage', 'nord', 'tokyo', 'claude', 'tide', 'catppuccin', 'caffeine'];
-    const THEME_ICONS = { light: '☀️', dark: '🌙', gruvbox: '🟤', sage: '🌿', nord: '❄️', tokyo: '🌸', claude: '🤖', tide: '🌊', catppuccin: '🐱', caffeine: '☕' };
-    const THEME_LABELS = { light: 'Light', dark: 'Dark', gruvbox: 'Gruvbox', sage: 'Sage', nord: 'Nord', tokyo: 'Tokyo Night', claude: 'Claude', tide: 'Tide', catppuccin: 'Catppuccin', caffeine: 'Caffeine' };
+    const THEMES = ['light', 'dark', 'gruvbox', 'sage', 'nord', 'tokyo', 'claude', 'tide', 'catppuccin', 'caffeine-white', 'caffeine-black'];
+    const THEME_ICONS = { light: '☀️', dark: '🌙', gruvbox: '🟤', sage: '🌿', nord: '❄️', tokyo: '🌸', claude: '🤖', tide: '🌊', catppuccin: '🐱', 'caffeine-white': '⬜', 'caffeine-black': '⬛' };
+    const THEME_LABELS = { light: 'Light', dark: 'Dark', gruvbox: 'Gruvbox', sage: 'Sage', nord: 'Nord', tokyo: 'Tokyo Night', claude: 'Claude', tide: 'Tide', catppuccin: 'Catppuccin', 'caffeine-white': 'Caffeine White', 'caffeine-black': 'Caffeine Black' };
 
     function applyTheme(theme) {
       // Remove all theme classes
-      document.body.classList.remove('dark', 'theme-gruvbox', 'theme-sage', 'theme-nord', 'theme-tokyo', 'theme-claude', 'theme-tide', 'theme-catppuccin', 'theme-caffeine');
+      document.body.classList.remove('dark', 'theme-gruvbox', 'theme-sage', 'theme-nord', 'theme-tokyo', 'theme-claude', 'theme-tide', 'theme-catppuccin', 'theme-caffeine-white', 'theme-caffeine-black');
       if (theme === 'dark')    document.body.classList.add('dark');
       else if (theme !== 'light') document.body.classList.add('theme-' + theme);
       const btn = document.getElementById('theme-toggle');
@@ -666,11 +667,11 @@
   window.addEventListener("pageshow", function(e) {
     if (e.persisted) {
       const saved = localStorage.getItem("theme") || "light";
-      document.body.classList.remove("dark", "theme-gruvbox", "theme-sage", "theme-nord", "theme-tokyo");
+      document.body.classList.remove("dark", "theme-gruvbox", "theme-sage", "theme-nord", "theme-tokyo", "theme-claude", "theme-tide", "theme-catppuccin", "theme-caffeine-white", "theme-caffeine-black");
       if (saved === "dark") document.body.classList.add("dark");
       else if (saved !== "light") document.body.classList.add("theme-" + saved);
       const btn = document.getElementById("theme-toggle");
-      const icons = { light: '🌙', dark: '☀️', gruvbox: '🟤', sage: '🌿', nord: '❄️', tokyo: '🌸' };
+      const icons = { light: '☀️', dark: '🌙', gruvbox: '🟤', sage: '🌿', nord: '❄️', tokyo: '🌸', claude: '🤖', tide: '🌊', catppuccin: '🐱', 'caffeine-white': '⬜', 'caffeine-black': '⬛' };
       if (btn) btn.innerText = icons[saved] || '🌙';
     }
   });

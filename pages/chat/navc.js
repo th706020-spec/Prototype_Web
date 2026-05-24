@@ -201,34 +201,43 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderBubble(msg, peerAvatar, isSelf, hideAvatar) {
     const exactTime = formatExactTime(msg.timestamp);
-    const fileMatch = msg.content.match(/^\[file:(.+?):(.+?)\]$/);
+    const isRecalled = msg.recalled === 1 || msg.recalled === true;
     let bubbleContent;
 
-    if (fileMatch) {
-      const [, fileName, fileUrl] = fileMatch;
-      const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${API.replace('/api', '')}${fileUrl}`;
-      if (isImageUrl(fileUrl)) {
-        bubbleContent = `<img class="msg-media-img" src="${fullUrl}" alt="${fileName}" onclick="window.open(this.src,'_blank')">`;
-      } else if (isVideoUrl(fileUrl)) {
-        bubbleContent = `<video class="msg-media-video" src="${fullUrl}" controls></video>`;
-      } else {
-        bubbleContent = `<a href="${fullUrl}" download="${fileName}" class="msg-file-link">📎 ${fileName}</a>`;
-      }
+    if (isRecalled) {
+      bubbleContent = `<span class="msg-recalled">🚫 Recalled Message</span>`;
     } else {
-      bubbleContent = msg.content;
+      const fileMatch = msg.content.match(/^\[file:(.+?):(.+?)\]$/);
+      if (fileMatch) {
+        const [, fileName, fileUrl] = fileMatch;
+        const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${API.replace('/api', '')}${fileUrl}`;
+        if (isImageUrl(fileUrl)) {
+          bubbleContent = `<img class="msg-media-img" src="${fullUrl}" alt="${fileName}" onclick="window.open(this.src,'_blank')">`;
+        } else if (isVideoUrl(fileUrl)) {
+          bubbleContent = `<video class="msg-media-video" src="${fullUrl}" controls></video>`;
+        } else {
+          bubbleContent = `<a href="${fullUrl}" download="${fileName}" class="msg-file-link">📎 ${fileName}</a>`;
+        }
+      } else {
+        bubbleContent = msg.content;
+      }
     }
+
+    const msgId = msg.id;
+    const canRecall = !isRecalled && (isSelf || ['admin', 'mod'].includes(window.Auth?.getUser()?.role));
+    const recallAttr = canRecall ? `data-msg-id="${msgId}"` : '';
 
     if (isSelf) {
       return `<div class="msg-row msg-send${hideAvatar ? ' hide-avatar' : ''}">
         <div class="msg-content">
-          <div class="msg-bubble primary-bubble" data-time="${exactTime}">${bubbleContent}</div>
+          <div class="msg-bubble primary-bubble${isRecalled ? ' recalled' : ''}" data-time="${exactTime}" ${recallAttr}>${bubbleContent}</div>
         </div>
       </div>`;
     } else {
       return `<div class="msg-row msg-receive${hideAvatar ? ' hide-avatar' : ''}">
         <img class="msg-avatar" src="${peerAvatar}" alt="Avatar">
         <div class="msg-content">
-          <div class="msg-bubble" data-time="${exactTime}">${bubbleContent}</div>
+          <div class="msg-bubble${isRecalled ? ' recalled' : ''}" data-time="${exactTime}" ${recallAttr}>${bubbleContent}</div>
         </div>
       </div>`;
     }
@@ -301,18 +310,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Remove the last msg-group element and re-render it merged with new msgs
         const groups = chatMessagesContainer.querySelectorAll('.msg-group');
         if (groups.length) groups[groups.length - 1].remove();
-        // Get all messages that belong to this group (from lastOld's group start) + new msgs
-        const groupStart = msgArr.findIndex(m => {
-          // Walk back from lastOld to find group start
-          const i = msgArr.indexOf(lastOld);
-          return m === msgArr[i];
-        });
-        // Simpler: just re-render entire last group's messages + new ones
-        const lastGroupMsgs = msgArr.filter(m =>
-          renderedMsgIds.has(m.id) &&
-          m.sender === lastOld.sender &&
-          new Date(lastOld.timestamp).getTime() - new Date(m.timestamp).getTime() <= 10 * 60 * 1000
-        );
+        // Use groupMessages on already-rendered messages to find the ACTUAL last group
+        const alreadyRendered = msgArr.filter(m => renderedMsgIds.has(m.id));
+        const allGroups = groupMessages(alreadyRendered);
+        const lastGroupMsgs = allGroups.length ? allGroups[allGroups.length - 1].messages : [];
         const tailMsgs = [...lastGroupMsgs, ...newMsgs];
         const tailHtml = renderMessages(tailMsgs, peerAvatar);
         chatMessagesContainer.insertAdjacentHTML('beforeend', tailHtml);
@@ -358,9 +359,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ===================== SEND =====================
+  let isSending = false;
   async function sendMessage() {
     const text = chatInput ? chatInput.value.trim() : "";
-    if (!text || !currentActiveUser || !token) return;
+    if (!text || !currentActiveUser || !token || isSending) return;
+    isSending = true;
+    if (chatInput) chatInput.value = "";
     try {
       await fetch(`${API}/messages`, {
         method: "POST",
@@ -370,10 +374,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         },
         body: JSON.stringify({ receiver: currentActiveUser, content: text }),
       });
-      if (chatInput) chatInput.value = "";
       await loadMessages();
       await refreshConversations();
-    } catch {}
+    } catch {} finally {
+      isSending = false;
+    }
   }
 
   async function sendFile(file) {
@@ -499,6 +504,48 @@ document.addEventListener("DOMContentLoaded", async () => {
       closeMobileSidebar();
     }
   });
+
+  // ===================== RECALL MESSAGE =====================
+  async function recallMessage(msgId) {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API}/messages/${msgId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        // Force a full re-render to show "Recalled Message"
+        renderedMsgIds = new Set();
+        lastRenderedMsgId = null;
+        await loadMessages();
+      }
+    } catch {}
+  }
+
+  // Context menu for recalling messages
+  const ctxMenu = document.createElement('div');
+  ctxMenu.id = 'msg-ctx-menu';
+  ctxMenu.style.cssText = 'position:fixed;z-index:9999;background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);padding:4px 0;display:none;min-width:140px;';
+  document.body.appendChild(ctxMenu);
+
+  function hideCtxMenu() { ctxMenu.style.display = 'none'; }
+
+  document.addEventListener('click', hideCtxMenu);
+  document.addEventListener('contextmenu', (e) => {
+    const bubble = e.target.closest('[data-msg-id]');
+    if (!bubble) { hideCtxMenu(); return; }
+    e.preventDefault();
+    const msgId = bubble.dataset.msgId;
+    ctxMenu.innerHTML = `<div style="padding:8px 16px;cursor:pointer;font-size:.9rem;color:var(--clr-text);transition:background .15s" onmouseenter="this.style.background='var(--clr-card-hover)'" onmouseleave="this.style.background=''" onclick="window._recallMsg(${msgId})">🚫 Recall Message</div>`;
+    ctxMenu.style.display = 'block';
+    let x = e.clientX, y = e.clientY;
+    if (x + 160 > window.innerWidth) x = window.innerWidth - 165;
+    if (y + 60 > window.innerHeight) y = window.innerHeight - 65;
+    ctxMenu.style.left = x + 'px';
+    ctxMenu.style.top = y + 'px';
+  });
+
+  window._recallMsg = async (msgId) => { hideCtxMenu(); await recallMessage(msgId); };
 
   // ===================== INIT =====================
   await Promise.all([refreshConversations(), refreshMemberList()]);
