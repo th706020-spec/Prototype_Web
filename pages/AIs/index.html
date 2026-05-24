@@ -11,46 +11,353 @@
 
   <div id="site-nav"></div>
 
-  <main class="ai-container">
-    <section class="ai-hero">
-      <h1>AI Tools</h1>
-      <p>
-        Prototype AI utilities for chat, plagiarism checks, reference generation, and file upload reading.
-        Each tool is wired for real APIs — configure your API key once below.
-      </p>
-      <button class="btn btn-outline ai-settings-btn" id="open-ai-settings">&#9881; API Settings</button>
+  <main class="ai-main" id="ai-top">
+    <section class="ai-container">
+      <div class="ai-hero">
+        <h1>AI Tools</h1>
+        <p>
+          Prototype AI utilities for chat, plagiarism checks, reference generation, and file upload reading.
+          Each tool is wired for real APIs — configure your API key once below.
+        </p>
+        <button class="btn btn-outline ai-settings-btn" id="open-ai-settings">&#9881; API Settings</button>
+      </div>
+
+      <div id="ai-settings-banner" class="ai-settings-banner" style="display:none">
+        <strong>No API key configured.</strong> Set your Gemini API key in
+        <button class="ai-banner-link" id="open-ai-settings-2">API Settings</button> before using AI features.
+      </div>
+
+      <section class="ai-grid" aria-label="AI tools list">
+        <button class="ai-card ai-card-button" type="button" data-modal-target="chat">
+          <div class="ai-card-title">AI Chat</div>
+          <div class="ai-card-desc">Chat with an AI model. Configure Gemini or a custom endpoint.</div>
+        </button>
+
+        <button class="ai-card ai-card-button" type="button" data-modal-target="plagiarism">
+          <div class="ai-card-title">Plagiarism Check</div>
+          <div class="ai-card-desc">Submit text or a file to an external plagiarism API.</div>
+        </button>
+
+        <button class="ai-card ai-card-button" type="button" data-modal-target="references">
+          <div class="ai-card-title">Reference Generator</div>
+          <div class="ai-card-desc">Generate IEEE and APA citations from DOI/URL or input text.</div>
+        </button>
+
+        <button class="ai-card ai-card-button" type="button" data-modal-target="upload">
+          <div class="ai-card-title">File Upload + Read</div>
+          <div class="ai-card-desc">Parse PDF/DOCX/TXT and prepare for cloud upload.</div>
+        </button>
+      </section>
     </section>
 
-    <!-- Settings warning banner (shown if no API key set) -->
-    <div id="ai-settings-banner" class="ai-settings-banner" style="display:none">
-      <strong>No API key configured.</strong> Set your Gemini API key in
-      <button class="ai-banner-link" id="open-ai-settings-2">API Settings</button> before using AI features.
+    <div class="ai-modal" data-modal="chat" aria-hidden="true">
+      <div class="ai-modal-content ai-modal-full" role="dialog" aria-modal="true" aria-label="AI Chat">
+        <button class="ai-modal-close" type="button" data-modal-close aria-label="Close">×</button>
+        <section id="ai-chat" class="ai-chat-page">
+          <div class="ai-chat-layout" id="chat-layout">
+            <aside class="ai-chat-sidebar">
+              <div class="ai-chat-sidebar-header">
+                <button class="btn btn-outline ai-chat-icon" type="button" id="chat-sidebar-toggle" aria-label="Toggle sidebar">☰</button>
+                <span class="ai-chat-sidebar-label">Chats</span>
+              </div>
+              <button class="btn btn-primary ai-chat-new" type="button" id="chat-new">New chat</button>
+              <div id="chat-history-list" class="ai-chat-history-list"></div>
+            </aside>
+
+            <section class="ai-chat-main">
+              <div class="ai-chat-topbar">
+                <div>
+                  <h1>AI Chat</h1>
+                  <p class="ai-inline-note">Configure Gemini or a custom chat endpoint before sending prompts.</p>
+                </div>
+                <div class="ai-links">
+                  <a class="btn btn-outline" href="#ai-top" data-modal-close>AI Tools</a>
+                  <a class="btn btn-outline" href="file:///D:/Portal/Prototype_Web/index.html">Site Home</a>
+                </div>
+              </div>
+
+              <details class="ai-settings">
+                <summary>API Settings</summary>
+                <form id="chat-settings" class="ai-form">
+                  <div class="ai-field">
+                    <label class="ai-label" for="chat-endpoint">Chat API endpoint (optional)</label>
+                    <input id="chat-endpoint" class="ai-input" data-setting="chatEndpoint" placeholder="https://api.example.com/chat" />
+                    <div class="ai-inline-note">If set, this endpoint is used instead of Gemini direct.</div>
+                  </div>
+                  <div class="ai-field">
+                    <label class="ai-label" for="gemini-key">Gemini API key (optional)</label>
+                    <input id="gemini-key" class="ai-input" data-setting="geminiApiKey" type="password" placeholder="AIza..." />
+                  </div>
+                  <div class="ai-field">
+                    <label class="ai-label" for="gemini-model">Gemini model</label>
+                    <input id="gemini-model" class="ai-input" data-setting="geminiModel" placeholder="gemini-1.5-flash" />
+                  </div>
+                  <div class="ai-field">
+                    <label class="ai-label" for="gemini-base">Gemini API base</label>
+                    <input id="gemini-base" class="ai-input" data-setting="geminiApiBase" placeholder="https://generativelanguage.googleapis.com/v1beta" />
+                  </div>
+                </form>
+              </details>
+
+              <section class="ai-chat-shell" aria-label="Chat conversation">
+                <div class="ai-chat-window">
+                  <div class="ai-chat-toolbar">
+                    <span>Conversation</span>
+                    <div id="chat-status" class="ai-status ai-status--compact">Ready.</div>
+                  </div>
+                  <div id="chat-history" class="ai-chat-history"></div>
+                </div>
+
+                <div class="ai-chat-composer">
+                  <form id="chat-form" class="ai-chat-form">
+                    <div class="ai-chat-input-row">
+                      <textarea id="chat-input" class="ai-chat-input" placeholder="Send a message..." required></textarea>
+                      <button class="btn btn-primary ai-chat-send" type="submit" id="chat-send" aria-label="Send message">➤</button>
+                    </div>
+                  </form>
+                </div>
+              </section>
+            </section>
+          </div>
+        </section>
+      </div>
     </div>
 
-    <section class="ai-grid" aria-label="AI tools list">
-      <a class="ai-card" href="chat.html">
-        <div class="ai-card-title">AI Chat</div>
-        <div class="ai-card-desc">Chat with an AI model. Configure Gemini or a custom endpoint.</div>
-      </a>
+    <div class="ai-modal" data-modal="plagiarism" aria-hidden="true">
+      <div class="ai-modal-content ai-modal-full" role="dialog" aria-modal="true" aria-label="Plagiarism Check">
+        <button class="ai-modal-close" type="button" data-modal-close aria-label="Close">×</button>
+        <section id="ai-plagiarism" class="ai-container">
+          <div class="ai-page-header">
+            <div>
+              <h1>Plagiarism Check</h1>
+              <p class="ai-inline-note">Submit text or upload a file for external plagiarism analysis.</p>
+            </div>
+            <div class="ai-links">
+              <a class="btn btn-outline" href="#ai-top" data-modal-close>AI Tools</a>
+              <a class="btn btn-outline" href="../../index.html">Site Home</a>
+            </div>
+          </div>
 
-      <a class="ai-card" href="plagiarism.html">
-        <div class="ai-card-title">Plagiarism Check</div>
-        <div class="ai-card-desc">Submit text or a file to an external plagiarism API.</div>
-      </a>
+          <details class="ai-settings">
+            <summary>API Settings</summary>
+            <form id="plagiarism-settings" class="ai-form">
+              <div class="ai-field">
+                <label class="ai-label" for="plagiarism-endpoint">Plagiarism API endpoint</label>
+                <input id="plagiarism-endpoint" class="ai-input" data-setting="plagiarismEndpoint" placeholder="https://api.example.com/plagiarism/check" />
+              </div>
+            </form>
+          </details>
 
-      <a class="ai-card" href="references.html">
-        <div class="ai-card-title">Reference Generator</div>
-        <div class="ai-card-desc">Generate IEEE and APA citations from DOI/URL or input text.</div>
-      </a>
+          <section class="ai-panel">
+            <h2>Check content</h2>
+            <form id="plagiarism-form" class="ai-form">
+              <div class="ai-field">
+                <label class="ai-label">Input type</label>
+                <div class="ai-select-wrapper" data-select>
+                  <button class="ai-select-trigger" type="button" data-select-trigger aria-expanded="false">
+                    <span data-select-label></span>
+                    <span aria-hidden="true">▾</span>
+                  </button>
+                  <div class="ai-select-menu" data-select-menu>
+                    <button class="ai-select-option" type="button" data-value="text">Text input</button>
+                    <button class="ai-select-option" type="button" data-value="file">File upload</button>
+                  </div>
+                  <select id="plagiarism-input-type" class="ai-select-native" aria-hidden="true">
+                    <option value="text">Text input</option>
+                    <option value="file">File upload</option>
+                  </select>
+                </div>
+              </div>
+              <div class="ai-field ai-collapse" id="plagiarism-text-section">
+                <label class="ai-label" for="plagiarism-text">Text to check</label>
+                <textarea id="plagiarism-text" class="ai-textarea" placeholder="Paste text here..."></textarea>
+              </div>
+              <div class="ai-field ai-collapse ai-hidden" id="plagiarism-file-section">
+                <label class="ai-label" for="plagiarism-file">Upload a file (PDF, DOCX, TXT)</label>
+                <div class="ai-file-control">
+                  <input id="plagiarism-file" class="ai-file-input" type="file" accept=".pdf,.docx,.txt" />
+                  <label class="btn btn-outline" for="plagiarism-file">Choose file</label>
+                  <span id="plagiarism-file-name" class="ai-file-name">No file selected</span>
+                </div>
+              </div>
+              <div class="ai-actions">
+                <button class="btn btn-primary" type="submit" id="plagiarism-submit">Run check</button>
+              </div>
+            </form>
+          </section>
 
-      <a class="ai-card" href="upload.html">
-        <div class="ai-card-title">File Upload + Read</div>
-        <div class="ai-card-desc">Parse PDF/DOCX/TXT and prepare for cloud upload.</div>
-      </a>
-    </section>
+          <section class="ai-panel">
+            <h2>Results</h2>
+            <div id="plagiarism-status" class="ai-status">Awaiting input.</div>
+            <div id="plagiarism-output" class="ai-output"></div>
+          </section>
+        </section>
+      </div>
+    </div>
+
+    <div class="ai-modal" data-modal="references" aria-hidden="true">
+      <div class="ai-modal-content ai-modal-full" role="dialog" aria-modal="true" aria-label="Reference Generator">
+        <button class="ai-modal-close" type="button" data-modal-close aria-label="Close">×</button>
+        <section id="ai-references" class="ai-container">
+          <div class="ai-page-header">
+            <div>
+              <h1>Reference Generator</h1>
+              <p class="ai-inline-note">Generate IEEE and APA citations from DOI/URL or raw source input.</p>
+            </div>
+            <div class="ai-links">
+              <a class="btn btn-outline" href="#ai-top" data-modal-close>AI Tools</a>
+              <a class="btn btn-outline" href="../../index.html">Site Home</a>
+            </div>
+          </div>
+
+          <details class="ai-settings">
+            <summary>API Settings</summary>
+            <form id="references-settings" class="ai-form">
+              <div class="ai-field">
+                <label class="ai-label" for="references-endpoint">References API endpoint</label>
+                <input id="references-endpoint" class="ai-input" data-setting="referencesEndpoint" placeholder="https://api.example.com/references/generate" />
+              </div>
+            </form>
+          </details>
+
+          <section class="ai-panel">
+            <h2>Source input</h2>
+            <form id="references-form" class="ai-form">
+              <div class="ai-field">
+                <label class="ai-label">Input type</label>
+                <div class="ai-select-wrapper" data-select>
+                  <button class="ai-select-trigger" type="button" data-select-trigger aria-expanded="false">
+                    <span data-select-label></span>
+                    <span aria-hidden="true">▾</span>
+                  </button>
+                  <div class="ai-select-menu" data-select-menu>
+                    <button class="ai-select-option" type="button" data-value="doi">DOI or URL</button>
+                    <button class="ai-select-option" type="button" data-value="manual">Manual details</button>
+                    <button class="ai-select-option" type="button" data-value="both">DOI + Manual details</button>
+                  </div>
+                  <select id="references-input-type" class="ai-select-native" aria-hidden="true">
+                    <option value="doi">DOI or URL</option>
+                    <option value="manual">Manual details</option>
+                    <option value="both">DOI + Manual details</option>
+                  </select>
+                </div>
+              </div>
+              <div class="ai-field ai-collapse" id="references-doi-section">
+                <label class="ai-label" for="references-doi">DOI or URL</label>
+                <input id="references-doi" class="ai-input" placeholder="10.1145/123456 or https://example.com" />
+              </div>
+              <div class="ai-field ai-collapse ai-hidden" id="references-text-section">
+                <label class="ai-label" for="references-text">Additional source details (optional)</label>
+                <textarea id="references-text" class="ai-textarea" placeholder="Author, title, year, publisher, etc."></textarea>
+              </div>
+              <div class="ai-actions">
+                <button class="btn btn-primary" type="submit" id="references-submit">Generate citations</button>
+              </div>
+            </form>
+          </section>
+
+          <section id="references-panel" class="ai-panel ai-result-panel is-hidden">
+            <h2>Results</h2>
+            <div id="references-status" class="ai-status">Awaiting input.</div>
+            <div id="references-results" class="ai-columns ai-result">
+              <div>
+                <h3>IEEE</h3>
+                <div id="references-ieee" class="ai-output"></div>
+              </div>
+              <div>
+                <h3>APA</h3>
+                <div id="references-apa" class="ai-output"></div>
+              </div>
+            </div>
+          </section>
+        </section>
+      </div>
+    </div>
+
+    <div class="ai-modal" data-modal="upload" aria-hidden="true">
+      <div class="ai-modal-content ai-modal-full" role="dialog" aria-modal="true" aria-label="File Upload + Read">
+        <button class="ai-modal-close" type="button" data-modal-close aria-label="Close">×</button>
+        <section id="ai-upload" class="ai-container">
+          <div class="ai-page-header">
+            <div>
+              <h1>File Upload + Read</h1>
+              <p class="ai-inline-note">Extract text from PDF/DOCX/TXT and prepare it for cloud upload.</p>
+            </div>
+            <div class="ai-links">
+              <a class="btn btn-outline" href="#ai-top" data-modal-close>AI Tools</a>
+              <a class="btn btn-outline" href="../../index.html">Site Home</a>
+            </div>
+          </div>
+
+          <details class="ai-settings">
+            <summary>API Settings</summary>
+            <form id="upload-settings" class="ai-form">
+              <div class="ai-field">
+                <label class="ai-label" for="upload-sign">Upload signing endpoint</label>
+                <input id="upload-sign" class="ai-input" data-setting="uploadSignEndpoint" placeholder="https://api.example.com/uploads/sign" />
+                <div class="ai-inline-note">Used to request a pre-signed upload URL.</div>
+              </div>
+              <div class="ai-field">
+                <label class="ai-label" for="upload-finalize">Upload finalize endpoint (optional)</label>
+                <input id="upload-finalize" class="ai-input" data-setting="uploadFinalizeEndpoint" placeholder="https://api.example.com/uploads/finalize" />
+              </div>
+            </form>
+          </details>
+
+          <section class="ai-panel">
+            <h2>File input</h2>
+            <form id="upload-form" class="ai-form">
+              <div class="ai-field">
+                <label class="ai-label">Input type</label>
+                <div class="ai-select-wrapper" data-select>
+                  <button class="ai-select-trigger" type="button" data-select-trigger aria-expanded="false">
+                    <span data-select-label></span>
+                    <span aria-hidden="true">▾</span>
+                  </button>
+                  <div class="ai-select-menu" data-select-menu>
+                    <button class="ai-select-option" type="button" data-value="file">File upload</button>
+                    <button class="ai-select-option" type="button" data-value="text">Paste text</button>
+                  </div>
+                  <select id="upload-input-type" class="ai-select-native" aria-hidden="true">
+                    <option value="file">File upload</option>
+                    <option value="text">Paste text</option>
+                  </select>
+                </div>
+              </div>
+              <div class="ai-field ai-collapse" id="upload-file-section">
+                <label class="ai-label" for="upload-file">Select file</label>
+                <div class="ai-file-control">
+                  <input id="upload-file" class="ai-file-input" type="file" accept=".pdf,.docx,.txt" />
+                  <label class="btn btn-outline" for="upload-file">Choose file</label>
+                  <span id="upload-file-name" class="ai-file-name">No file selected</span>
+                </div>
+              </div>
+              <div class="ai-field ai-collapse ai-hidden" id="upload-text-section">
+                <label class="ai-label" for="upload-text">Paste text</label>
+                <textarea id="upload-text" class="ai-textarea" placeholder="Paste text to upload as a .txt file..."></textarea>
+              </div>
+              <div class="ai-actions ai-upload-actions">
+                <button class="btn btn-outline" type="button" id="upload-read">Read file</button>
+                <button class="btn btn-primary" type="submit" id="upload-send">Upload to cloud</button>
+              </div>
+            </form>
+            <div id="upload-status" class="ai-status ai-hidden"></div>
+          </section>
+
+          <section id="upload-preview-panel" class="ai-panel ai-result-panel is-hidden">
+            <h2>Extracted text preview</h2>
+            <div id="upload-preview" class="ai-output"></div>
+          </section>
+
+          <section id="upload-result-panel" class="ai-panel ai-result-panel is-hidden">
+            <h2>Upload result</h2>
+            <div id="upload-result" class="ai-output"></div>
+          </section>
+        </section>
+      </div>
+    </div>
   </main>
 
-  <!-- AI Settings Modal -->
   <div id="ai-settings-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="AI API Settings">
     <div class="modal-box">
       <button class="modal-close" id="close-ai-settings" aria-label="Close">&times;</button>
@@ -84,9 +391,12 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="../../js/config.js"></script>
   <script src="../../js/auth.js"></script>
   <script src="../../js/nav.js"></script>
+  <script src="./select-ui.js"></script>
   <script type="module">
     import { loadSettings, saveSettings, bindSettings } from './http.js';
 
@@ -102,10 +412,8 @@
     document.getElementById('close-ai-settings').addEventListener('click', closeSettings);
     modal.addEventListener('click', (e) => { if (e.target === modal) closeSettings(); });
 
-    // Fill form with stored settings
     bindSettings(form);
 
-    // Save on submit
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const current = loadSettings();
@@ -117,12 +425,228 @@
       closeSettings();
     });
 
-    // Show banner if no API key
     const settings = loadSettings();
     if (!settings.geminiApiKey) {
       banner.style.display = 'block';
     }
   </script>
+  <script>
+    (function () {
+      const body = document.body;
+      const layout = document.getElementById('chat-layout');
+      const toggle = document.getElementById('chat-sidebar-toggle');
+      const nav = document.querySelector('.navbar');
+      const navAuth = document.querySelector('.navbar-auth');
+      let hideTimer = null;
+      let lastScrollY = window.scrollY;
+
+      if (layout && toggle) {
+        toggle.addEventListener('click', () => {
+          layout.classList.toggle('is-collapsed');
+        });
+      }
+
+      if (nav) {
+        const setNavHidden = (hidden) => {
+          nav.classList.toggle('is-hidden', hidden);
+          body.classList.toggle('nav-hidden', hidden);
+        };
+        const showNav = () => setNavHidden(false);
+        const scheduleHide = () => {
+          clearTimeout(hideTimer);
+          if (!body.classList.contains('ai-chat-body')) {
+            return;
+          }
+          hideTimer = setTimeout(() => {
+            setNavHidden(true);
+          }, 3000);
+        };
+        showNav();
+        scheduleHide();
+
+        window.addEventListener('scroll', () => {
+          if (!body.classList.contains('ai-chat-body')) {
+            setNavHidden(false);
+            return;
+          }
+          const current = window.scrollY;
+          if (current < lastScrollY) {
+            showNav();
+          }
+          scheduleHide();
+          lastScrollY = current;
+        });
+
+        window.addEventListener('mousemove', (event) => {
+          if (!body.classList.contains('ai-chat-body')) {
+            return;
+          }
+          if (event.clientY <= 80) {
+            showNav();
+            scheduleHide();
+          }
+        });
+      }
+
+      if (navAuth && !navAuth.querySelector('.ai-theme-toggle')) {
+        const themeButton = document.createElement('button');
+        themeButton.type = 'button';
+        themeButton.className = 'btn btn-outline ai-theme-toggle';
+        const setLabel = () => {
+          themeButton.textContent = body.classList.contains('dark') ? 'Light mode' : 'Dark mode';
+        };
+        setLabel();
+        themeButton.addEventListener('click', () => {
+          body.classList.toggle('dark');
+          setLabel();
+        });
+        navAuth.prepend(themeButton);
+      }
+    })();
+  </script>
+  <script>
+    (function () {
+      const body = document.body;
+      const modals = Array.from(document.querySelectorAll('[data-modal]'));
+      const triggers = Array.from(document.querySelectorAll('[data-modal-target]'));
+      const closeButtons = Array.from(document.querySelectorAll('[data-modal-close]'));
+
+      const closeAll = () => {
+        modals.forEach((modal) => {
+          modal.classList.remove('is-open');
+          modal.setAttribute('aria-hidden', 'true');
+        });
+        body.classList.remove('ai-modal-open');
+        body.classList.remove('ai-chat-body');
+      };
+
+      const openModal = (name) => {
+        closeAll();
+        const modal = modals.find((item) => item.dataset.modal === name);
+        if (!modal) {
+          return;
+        }
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        body.classList.add('ai-modal-open');
+        if (name === 'chat') {
+          body.classList.add('ai-chat-body');
+          const input = document.getElementById('chat-input');
+          if (input) {
+            input.dispatchEvent(new Event('input'));
+          }
+        }
+      };
+
+      triggers.forEach((trigger) => {
+        trigger.addEventListener('click', () => {
+          const target = trigger.dataset.modalTarget;
+          if (target) {
+            openModal(target);
+          }
+        });
+      });
+
+      closeButtons.forEach((button) => {
+        button.addEventListener('click', closeAll);
+      });
+
+      modals.forEach((modal) => {
+        modal.addEventListener('click', (event) => {
+          if (event.target === modal) {
+            closeAll();
+          }
+        });
+      });
+    })();
+  </script>
+  <script>
+    (function () {
+      const select = document.getElementById('plagiarism-input-type');
+      const textSection = document.getElementById('plagiarism-text-section');
+      const fileSection = document.getElementById('plagiarism-file-section');
+      if (!select || !textSection || !fileSection) {
+        return;
+      }
+      const apply = () => {
+        if (select.value === 'file') {
+          textSection.classList.add('ai-hidden');
+          fileSection.classList.remove('ai-hidden');
+        } else {
+          textSection.classList.remove('ai-hidden');
+          fileSection.classList.add('ai-hidden');
+        }
+      };
+      select.addEventListener('change', apply);
+      apply();
+    })();
+  </script>
+  <script>
+    (function () {
+      const select = document.getElementById('references-input-type');
+      const doiSection = document.getElementById('references-doi-section');
+      const textSection = document.getElementById('references-text-section');
+      if (!select || !doiSection || !textSection) {
+        return;
+      }
+      const apply = () => {
+        if (select.value === 'manual') {
+          doiSection.classList.add('ai-hidden');
+          textSection.classList.remove('ai-hidden');
+          return;
+        }
+        if (select.value === 'both') {
+          doiSection.classList.remove('ai-hidden');
+          textSection.classList.remove('ai-hidden');
+          return;
+        }
+        doiSection.classList.remove('ai-hidden');
+        textSection.classList.add('ai-hidden');
+      };
+      select.addEventListener('change', apply);
+      apply();
+    })();
+  </script>
+  <script>
+    (function () {
+      const select = document.getElementById('upload-input-type');
+      const fileSection = document.getElementById('upload-file-section');
+      const textSection = document.getElementById('upload-text-section');
+      const readButton = document.getElementById('upload-read');
+      const fileInput = document.getElementById('upload-file');
+      const fileName = document.getElementById('upload-file-name');
+      const textInput = document.getElementById('upload-text');
+      if (!select || !fileSection || !textSection || !readButton) {
+        return;
+      }
+      const apply = () => {
+        if (select.value === 'text') {
+          fileSection.classList.add('ai-hidden');
+          textSection.classList.remove('ai-hidden');
+          readButton.textContent = 'Preview text';
+          if (fileInput) {
+            fileInput.value = '';
+          }
+          if (fileName) {
+            fileName.textContent = 'No file selected';
+          }
+          return;
+        }
+        fileSection.classList.remove('ai-hidden');
+        textSection.classList.add('ai-hidden');
+        readButton.textContent = 'Read file';
+        if (textInput) {
+          textInput.value = '';
+        }
+      };
+      select.addEventListener('change', apply);
+      apply();
+    })();
+  </script>
+  <script type="module" src="./chat.js"></script>
+  <script type="module" src="./plagiarism.js"></script>
+  <script type="module" src="./references.js"></script>
+  <script type="module" src="./upload.js"></script>
 
 </body>
 </html>
