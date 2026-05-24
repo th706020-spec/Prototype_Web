@@ -125,6 +125,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const allUsers = await fetchAllUsers();
     const others = allUsers.filter(u => u.username !== currentUser);
 
+    // Update online state map from server data
+    allUsers.forEach(u => { onlineStateMap[u.username] = !!u.is_online; });
+
     const online = others.filter(u => u.is_online).sort((a, b) => getRoleOrder(a) - getRoleOrder(b));
     const offline = others.filter(u => !u.is_online).sort((a, b) => getRoleOrder(a) - getRoleOrder(b));
 
@@ -151,11 +154,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ===================== MESSAGES =====================
 
   // Group messages within 10 minutes from same sender
+  function toUtcDate(ts) {
+    if (!ts) return new Date(0);
+    return new Date(ts.includes('Z') || ts.includes('+') ? ts : ts + 'Z');
+  }
+
   function groupMessages(messages) {
     const groups = [];
     let currentGroup = null;
     messages.forEach(msg => {
-      const ts = new Date(msg.timestamp).getTime();
+      const ts = toUtcDate(msg.timestamp).getTime();
       if (
         currentGroup &&
         currentGroup.sender === msg.sender &&
@@ -173,12 +181,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function formatGroupTime(ts) {
-    const d = new Date(ts);
+    const d = toUtcDate(ts);
     return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
 
   function formatExactTime(ts) {
-    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const d = toUtcDate(ts);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
   function isImageUrl(url) {
@@ -323,6 +332,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     pollInterval = setInterval(loadMessages, 3000);
   }
 
+  // Track online states from server (username → is_online boolean)
+  let onlineStateMap = {};
+
   function openChat(username, userAvatar) {
     currentActiveUser = username;
     // Reset message tracking so fresh render happens for new peer
@@ -330,7 +342,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderedMsgIds = new Set();
     if (chatAvatarEl) chatAvatarEl.src = userAvatar;
     if (chatNameEl) chatNameEl.textContent = username;
-    if (chatStatusEl) chatStatusEl.textContent = "Loading...";
+    // Use server-side online state map, not DOM dots
+    if (chatStatusEl) {
+      chatStatusEl.textContent = onlineStateMap[username] ? 'Online' : 'Offline';
+    }
     if (noChatEl) noChatEl.style.display = "none";
     if (activeChatEl) activeChatEl.style.display = "flex";
     // Update active state in conversation list
@@ -339,14 +354,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     loadMessages();
     startPolling();
-    // Update status from member list
-    const allUserEls = document.querySelectorAll('.member-item');
-    allUserEls.forEach(el => {
-      if (el.dataset.username === username) {
-        const dot = el.querySelector('.member-status-dot');
-        if (chatStatusEl) chatStatusEl.textContent = dot && dot.classList.contains('online') ? 'Online' : 'Offline';
-      }
-    });
   }
 
   // ===================== SEND =====================
@@ -451,6 +458,44 @@ document.addEventListener("DOMContentLoaded", async () => {
       mentorItems[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } else {
       alert("No mentors are available right now.");
+    }
+  });
+
+  // ── Mobile sidebar peek tabs ──────────────────────────
+  const chatLeftSidebar = document.getElementById('chat-left-sidebar');
+  const chatRightSidebar = document.getElementById('chat-right-sidebar');
+  const chatSidebarBackdrop = document.getElementById('chat-sidebar-backdrop');
+  const peekLeft = document.getElementById('chat-peek-left');
+  const peekRight = document.getElementById('chat-peek-right');
+  const closeBtnLeft = document.getElementById('close-left-sidebar');
+  const closeBtnRight = document.getElementById('close-right-sidebar');
+
+  function openMobileSidebar(side) {
+    if (side === 'left') {
+      chatLeftSidebar?.classList.add('mobile-open');
+      chatRightSidebar?.classList.remove('mobile-open');
+    } else {
+      chatRightSidebar?.classList.add('mobile-open');
+      chatLeftSidebar?.classList.remove('mobile-open');
+    }
+    chatSidebarBackdrop?.classList.add('visible');
+  }
+  function closeMobileSidebar() {
+    chatLeftSidebar?.classList.remove('mobile-open');
+    chatRightSidebar?.classList.remove('mobile-open');
+    chatSidebarBackdrop?.classList.remove('visible');
+  }
+
+  peekLeft?.addEventListener('click', () => openMobileSidebar('left'));
+  peekRight?.addEventListener('click', () => openMobileSidebar('right'));
+  closeBtnLeft?.addEventListener('click', closeMobileSidebar);
+  closeBtnRight?.addEventListener('click', closeMobileSidebar);
+  chatSidebarBackdrop?.addEventListener('click', closeMobileSidebar);
+
+  // Close left sidebar when a conversation is selected on mobile
+  document.getElementById('conversation-list')?.addEventListener('click', function(e) {
+    if (e.target.closest('.conv-item') && window.innerWidth <= 768) {
+      closeMobileSidebar();
     }
   });
 

@@ -525,6 +525,161 @@
   flex-shrink: 0;
 }
 
+/* Mobile sidebar toggle — hidden on desktop, shown on mobile via @media */
+.mobile-sidebar-toggle { display: none; }
+
+/* ── Sidebar close button (inside sidebar header on mobile) ─ */
+.sidebar-close-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--clr-muted);
+  font-size: 1rem;
+  padding: 4px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.sidebar-close-btn:hover { color: var(--clr-text); background: var(--clr-card-hover); }
+
+/* Right sidebar header (mobile-only label) */
+.chat-right-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 8px;
+  border-bottom: 1px solid var(--clr-border);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--clr-text);
+  flex-shrink: 0;
+}
+
+/* ── Peek tabs — hidden on desktop ──────────────────── */
+.chat-peek-tab {
+  display: none;
+}
+
+/* ── Chat Mobile Responsiveness ──────────────────────── */
+@media (max-width: 900px) {
+  /* Hide member list on medium screens (desktop) but show peek tab */
+  .chat-right-sidebar { display: none; }
+}
+
+@media (max-width: 768px) {
+  .chat-layout {
+    position: relative;
+    height: calc(100vh - 56px);
+  }
+
+  /* Both sidebars become slide-over panels */
+  .chat-left-sidebar {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    z-index: 200;
+    width: 80vw;
+    max-width: 310px;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.18);
+  }
+  .chat-left-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .chat-right-sidebar {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    z-index: 200;
+    width: 80vw;
+    max-width: 310px;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.18);
+    background: var(--clr-surface);
+    border-left: 1px solid var(--clr-border);
+  }
+  .chat-right-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  /* Show right sidebar header close button on mobile */
+  .chat-right-header { display: flex; }
+  .sidebar-close-btn { display: inline-flex; }
+
+  /* Backdrop */
+  .chat-sidebar-backdrop {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 199;
+    background: rgba(0,0,0,0.35);
+  }
+  .chat-sidebar-backdrop.visible { display: block; }
+
+  /* Main area takes full width */
+  .chat-main { width: 100%; }
+
+  /* Chat header simplification */
+  .chat-header { padding: 10px 12px; }
+
+  /* Input area on mobile */
+  .chat-input-row { padding: 8px 10px; }
+  .chat-input-box input { font-size: 0.9rem; }
+
+  /* ── Peek tabs ── */
+  .chat-peek-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 201;
+    background: var(--clr-primary);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    padding: 10px 5px;
+    gap: 4px;
+    border-radius: 0 8px 8px 0;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+    transition: transform 0.25s ease, left 0.25s ease, right 0.25s ease;
+  }
+  .chat-peek-tab-right {
+    border-radius: 8px 0 0 8px;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+  }
+  .chat-peek-icon { font-size: 1.1rem; line-height: 1; }
+  .chat-peek-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+  }
+
+  .chat-peek-tab-left { left: 0; }
+  .chat-peek-tab-right { right: 0; }
+
+  /* Shift peek tabs when sidebars open */
+  .chat-left-sidebar.mobile-open ~ .chat-peek-tab-left,
+  body.left-sidebar-open .chat-peek-tab-left {
+    left: calc(min(80vw, 310px));
+  }
+}
+
+@media (max-width: 480px) {
+  .chat-left-sidebar, .chat-right-sidebar { width: 88vw; max-width: unset; }
+  .chat-header-info .chat-header-name { font-size: 0.95rem; }
+}
+
+
+
 .chat-file-btn:hover {
   background-color: var(--clr-bg);
 }

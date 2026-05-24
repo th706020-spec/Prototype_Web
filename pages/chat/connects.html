@@ -11,11 +11,24 @@
     <div id="site-nav"></div>
 
     <div class="chat-layout">
+      <!-- Mobile: backdrop overlay when a sidebar is open -->
+      <div class="chat-sidebar-backdrop" id="chat-sidebar-backdrop"></div>
+
+      <!-- Mobile: peek tabs sticking out from edges -->
+      <button class="chat-peek-tab chat-peek-tab-left" id="chat-peek-left" aria-label="Open conversations">
+        <span class="chat-peek-icon">💬</span>
+        <span class="chat-peek-label">Chats</span>
+      </button>
+      <button class="chat-peek-tab chat-peek-tab-right" id="chat-peek-right" aria-label="Open members">
+        <span class="chat-peek-icon">👥</span>
+        <span class="chat-peek-label">Members</span>
+      </button>
 
       <!-- LEFT SIDEBAR: conversation list -->
-      <aside class="chat-left-sidebar">
+      <aside class="chat-left-sidebar" id="chat-left-sidebar">
         <div class="chat-left-header">
           <h3>Messages</h3>
+          <button class="sidebar-close-btn" id="close-left-sidebar" aria-label="Close">✕</button>
         </div>
         <div id="conversation-list" class="conversation-list">
           <div class="sidebar-loading">Loading...</div>
@@ -76,7 +89,11 @@
       </main>
 
       <!-- RIGHT SIDEBAR: member list (Discord-style) -->
-      <aside class="chat-right-sidebar">
+      <aside class="chat-right-sidebar" id="chat-right-sidebar">
+        <div class="chat-right-header">
+          <span>Members</span>
+          <button class="sidebar-close-btn" id="close-right-sidebar" aria-label="Close">✕</button>
+        </div>
         <div class="members-list-container">
           <div id="members-by-role"></div>
         </div>

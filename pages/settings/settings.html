@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings – Protocol</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link id="custom-font-link" rel="stylesheet" href="">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <div class="settings-layout">
+    <!-- Left sidebar -->
+    <aside class="settings-sidebar">
+      <nav class="settings-nav">
+        <div class="settings-nav-section">
+          <div class="settings-nav-label">Account</div>
+          <button class="settings-nav-item active" data-section="user">
+            <i class="ti ti-user"></i> User
+          </button>
+        </div>
+        <div class="settings-nav-section">
+          <div class="settings-nav-label">Appearance</div>
+          <button class="settings-nav-item" data-section="customization">
+            <i class="ti ti-palette"></i> Customization
+          </button>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Right content -->
+    <main class="settings-content">
+
+      <!-- ── User section ── -->
+      <section class="settings-section active" id="section-user">
+        <h2 class="settings-section-title">User</h2>
+        <p class="settings-section-desc">Manage your account information and security.</p>
+
+        <div class="settings-group">
+          <div class="settings-row">
+            <div class="settings-field-label">
+              <span>Avatar</span>
+              <small>Click to upload a new photo</small>
+            </div>
+            <label class="avatar-upload-label" id="settings-avatar-label" title="Click to change avatar">
+              <img id="settings-avatar-img" src="" alt="Avatar" class="settings-avatar">
+              <div class="avatar-upload-overlay">📷</div>
+              <input type="file" id="settings-avatar-input" accept="image/*" hidden>
+            </label>
+            <div id="settings-avatar-progress" class="avatar-progress" style="display:none">
+              <div class="progress-bar-inner" id="settings-avatar-bar"></div>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-field-label">
+              <span>Username</span>
+              <small>3–30 alphanumeric characters or underscore</small>
+            </div>
+            <div class="settings-field-input">
+              <input type="text" id="settings-username" class="settings-input" placeholder="Username">
+              <button class="btn btn-primary settings-save-btn" id="save-username-btn">Save</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-field-label">
+              <span>Email</span>
+              <small>Your registered email address</small>
+            </div>
+            <div class="settings-field-input">
+              <input type="email" id="settings-email" class="settings-input" disabled>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-field-label">
+              <span>Member Since</span>
+            </div>
+            <div class="settings-field-static" id="settings-joined">—</div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-field-label">
+              <span>Role &amp; Tier</span>
+            </div>
+            <div class="settings-field-static">
+              <span id="settings-role-badge" class="role-pill">Member</span>
+              <span id="settings-tier-badge" class="tier-pill">Free</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-divider"></div>
+
+        <h3 class="settings-subsection-title">Change Password</h3>
+        <div class="settings-group">
+          <div class="settings-row">
+            <div class="settings-field-label">
+              <span>Current Password</span>
+            </div>
+            <div class="settings-field-input">
+              <input type="password" id="settings-old-pass" class="settings-input" placeholder="Current password">
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-field-label">
+              <span>New Password</span>
+              <small>Minimum 6 characters</small>
+            </div>
+            <div class="settings-field-input">
+              <input type="password" id="settings-new-pass" class="settings-input" placeholder="New password">
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-field-label">
+              <span>Confirm New Password</span>
+            </div>
+            <div class="settings-field-input">
+              <input type="password" id="settings-confirm-pass" class="settings-input" placeholder="Confirm password">
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-field-label"></div>
+            <div class="settings-field-input">
+              <button class="btn btn-primary settings-save-btn" id="save-password-btn">Update Password</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-divider"></div>
+
+        <div class="settings-row danger-row">
+          <div class="settings-field-label">
+            <span>Log Out</span>
+            <small>Sign out of your current session</small>
+          </div>
+          <button class="btn btn-outline danger settings-save-btn" id="settings-logout-btn">Log Out</button>
+        </div>
+      </section>
+
+      <!-- ── Customization section ── -->
+      <section class="settings-section" id="section-customization">
+        <h2 class="settings-section-title">Customization</h2>
+        <p class="settings-section-desc">Personalize how Protocol looks and feels for you.</p>
+
+        <div class="settings-group">
+          <div class="settings-row">
+            <div class="settings-field-label">
+              <span>Theme</span>
+              <small>Applies across all pages</small>
+            </div>
+            <div class="settings-field-input">
+              <select id="settings-theme-select" class="settings-select">
+                <option value="light">☀️ Light</option>
+                <option value="dark">🌙 Dark</option>
+                <option value="gruvbox">🟤 Gruvbox</option>
+                <option value="sage">🌿 Sage</option>
+                <option value="nord">❄️ Nord</option>
+                <option value="tokyo">🌸 Tokyo Night</option>
+                <option value="claude">🤖 Claude</option>
+                <option value="tide">🌊 Tide</option>
+                <option value="catppuccin">🐱 Catppuccin</option>
+                <option value="caffeine">☕ Caffeine</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-field-label">
+              <span>Font</span>
+              <small>Choose your preferred reading font</small>
+            </div>
+            <div class="settings-field-input">
+              <select id="settings-font-select" class="settings-select">
+                <option value="">Default (System)</option>
+                <option value="JetBrains Mono">JetBrains Mono</option>
+                <option value="Fira Code">Fira Code</option>
+                <option value="Victor Mono">Victor Mono</option>
+                <option value="Space Mono">Space Mono</option>
+                <option value="Inconsolata">Inconsolata</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-row font-preview-row">
+            <div class="settings-field-label">
+              <span>Font Preview</span>
+            </div>
+            <div class="font-preview" id="font-preview">
+              The quick brown fox jumps over the lazy dog. 0123456789
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-divider"></div>
+
+        <h3 class="settings-subsection-title">Custom CSS <span class="coming-soon-pill">Coming Soon</span></h3>
+        <div class="settings-group">
+          <div class="settings-row vertical-row">
+            <div class="settings-field-label">
+              <span>Inject custom CSS</span>
+              <small>Personalize Protocol's appearance with your own CSS. This feature is coming soon.</small>
+            </div>
+            <textarea class="settings-custom-css" id="settings-custom-css" placeholder="/* Your custom CSS will go here */
+/* Example:
+.navbar { border-bottom: 2px solid hotpink; }
+*/" disabled></textarea>
+            <p class="coming-soon-note">Custom CSS injection will be enabled in a future update.</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="../../js/config.js"></script>
+  <script src="../../js/auth.js"></script>
+  <script src="../../js/nav.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>

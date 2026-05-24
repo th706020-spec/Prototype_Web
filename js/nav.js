@@ -9,6 +9,28 @@
 
   const API = window.AppConfig.API;
 
+  // --- Global font loader ---
+  (function applyGlobalFont() {
+    const FONT_URLS = {
+      'JetBrains Mono': 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap',
+      'Fira Code': 'https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap',
+      'Victor Mono': 'https://fonts.googleapis.com/css2?family=Victor+Mono:wght@400;500;600&display=swap',
+      'Space Mono': 'https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap',
+      'Inconsolata': 'https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;500;600;700&display=swap',
+    };
+    const savedFont = localStorage.getItem('protocol_font') || '';
+    if (!savedFont) return;
+    const url = FONT_URLS[savedFont];
+    if (url && !document.getElementById('nav-font-link')) {
+      const link = document.createElement('link');
+      link.id = 'nav-font-link';
+      link.rel = 'stylesheet';
+      link.href = url;
+      document.head.appendChild(link);
+    }
+    document.body.style.fontFamily = `'${savedFont}', monospace`;
+  })();
+
   // --- Navbar: auth state ---
   const user = window.Auth ? window.Auth.getUser() : null;
 
@@ -53,6 +75,7 @@
           <ul class="navbar-links">
             <li><a href="${base}index.html">Home</a></li>
             <li><a href="#">About</a></li>
+            <li><a href="${base}pages/roles/roles.html">Roles</a></li>
           </ul>
 
           <div class="navbar-logo">
@@ -62,7 +85,21 @@
           </div>
 
           <div class="navbar-auth">
-            <button id="theme-toggle" class="btn btn-outline" title="Cycle theme">🌙</button>
+            <div class="nav-theme-picker" id="nav-theme-picker">
+              <button class="btn btn-outline nav-theme-btn" id="theme-toggle" title="Choose theme">🌙</button>
+              <div class="nav-theme-dropdown" id="nav-theme-dropdown">
+                <button class="nav-theme-option" data-theme="light">☀️ Light</button>
+                <button class="nav-theme-option" data-theme="dark">🌙 Dark</button>
+                <button class="nav-theme-option" data-theme="gruvbox">🟤 Gruvbox</button>
+                <button class="nav-theme-option" data-theme="sage">🌿 Sage</button>
+                <button class="nav-theme-option" data-theme="nord">❄️ Nord</button>
+                <button class="nav-theme-option" data-theme="tokyo">🌸 Tokyo Night</button>
+                <button class="nav-theme-option" data-theme="claude">🤖 Claude</button>
+                <button class="nav-theme-option" data-theme="tide">🌊 Tide</button>
+                <button class="nav-theme-option" data-theme="catppuccin">🐱 Catppuccin</button>
+                <button class="nav-theme-option" data-theme="caffeine">☕ Caffeine</button>
+              </div>
+            </div>
             ${user ? `
             <div class="nav-bell-wrapper" id="nav-bell-wrapper">
               <button class="nav-bell-btn" id="nav-bell" title="Notifications">🔔</button>
@@ -85,34 +122,54 @@
     });
 
     // ---- Multi-theme system ----
-    const THEMES = ['light', 'dark', 'gruvbox', 'sage', 'nord', 'tokyo'];
-    const THEME_ICONS = { light: '🌙', dark: '☀️', gruvbox: '🟤', sage: '🌿', nord: '❄️', tokyo: '🌸' };
-    const THEME_LABELS = { light: 'Light', dark: 'Dark', gruvbox: 'Gruvbox', sage: 'Sage', nord: 'Nord', tokyo: 'Tokyo Night' };
+    const THEMES = ['light', 'dark', 'gruvbox', 'sage', 'nord', 'tokyo', 'claude', 'tide', 'catppuccin', 'caffeine'];
+    const THEME_ICONS = { light: '☀️', dark: '🌙', gruvbox: '🟤', sage: '🌿', nord: '❄️', tokyo: '🌸', claude: '🤖', tide: '🌊', catppuccin: '🐱', caffeine: '☕' };
+    const THEME_LABELS = { light: 'Light', dark: 'Dark', gruvbox: 'Gruvbox', sage: 'Sage', nord: 'Nord', tokyo: 'Tokyo Night', claude: 'Claude', tide: 'Tide', catppuccin: 'Catppuccin', caffeine: 'Caffeine' };
 
     function applyTheme(theme) {
       // Remove all theme classes
-      document.body.classList.remove('dark', 'theme-gruvbox', 'theme-sage', 'theme-nord', 'theme-tokyo');
+      document.body.classList.remove('dark', 'theme-gruvbox', 'theme-sage', 'theme-nord', 'theme-tokyo', 'theme-claude', 'theme-tide', 'theme-catppuccin', 'theme-caffeine');
       if (theme === 'dark')    document.body.classList.add('dark');
       else if (theme !== 'light') document.body.classList.add('theme-' + theme);
       const btn = document.getElementById('theme-toggle');
-      if (btn) {
-        const nextIdx = (THEMES.indexOf(theme) + 1) % THEMES.length;
-        const nextTheme = THEMES[nextIdx];
-        btn.title = `Theme: ${THEME_LABELS[theme]} → click for ${THEME_LABELS[nextTheme]}`;
-        btn.innerText = THEME_ICONS[theme] || '🌙';
-      }
+      if (btn) btn.innerText = THEME_ICONS[theme] || '🌙';
+      // Mark active option in theme dropdown
+      document.querySelectorAll('.nav-theme-option').forEach(function(opt) {
+        opt.classList.toggle('active', opt.dataset.theme === theme);
+      });
       localStorage.setItem('theme', theme);
     }
 
     const savedTheme = localStorage.getItem('theme') || 'light';
     applyTheme(savedTheme);
 
-    const themeBtn = document.getElementById('theme-toggle');
-    if (themeBtn) {
-      themeBtn.addEventListener('click', function() {
-        const cur = localStorage.getItem('theme') || 'light';
-        const nextIdx = (THEMES.indexOf(cur) + 1) % THEMES.length;
-        applyTheme(THEMES[nextIdx]);
+    // ---- Single-open-at-a-time dropdown manager ----
+    const _dropdowns = ['nav-theme-dropdown', 'nav-user-dropdown', 'nav-bell-dropdown'];
+    function closeAllDropdowns(except) {
+      _dropdowns.forEach(function(id) {
+        if (id === except) return;
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('is-open');
+      });
+    }
+
+    // Theme dropdown toggle
+    const themePicker = document.getElementById('nav-theme-picker');
+    const themeDropdown = document.getElementById('nav-theme-dropdown');
+    if (themePicker && themeDropdown) {
+      document.getElementById('theme-toggle').addEventListener('click', function(e) {
+        closeAllDropdowns('nav-theme-dropdown');
+        themeDropdown.classList.toggle('is-open');
+        e.stopPropagation();
+      });
+      themeDropdown.querySelectorAll('.nav-theme-option').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          applyTheme(btn.dataset.theme);
+          themeDropdown.classList.remove('is-open');
+        });
+      });
+      document.addEventListener('click', function(e) {
+        if (!themePicker.contains(e.target)) themeDropdown.classList.remove('is-open');
       });
     }
 
@@ -125,6 +182,14 @@
       });
     }
 
+    // Settings button → navigate to settings page
+    const navSettingsBtn = document.getElementById("nav-settings-btn");
+    if (navSettingsBtn) {
+      navSettingsBtn.addEventListener("click", function () {
+        window.location.href = `${base}pages/settings/settings.html`;
+      });
+    }
+
     // User box dropdown toggle
     const userBox = document.getElementById("nav-user-box");
     const userDropdown = document.getElementById("nav-user-dropdown");
@@ -132,20 +197,12 @@
       userBox.addEventListener("click", function (e) {
         // Don't toggle if click originated from inside the dropdown (except the box itself)
         if (e.target.closest(".nav-user-dropdown") && e.target !== userBox) return;
+        closeAllDropdowns('nav-user-dropdown');
         userDropdown.classList.toggle("is-open");
         e.stopPropagation();
       });
       document.addEventListener("click", function (e) {
         if (!userBox.contains(e.target)) userDropdown.classList.remove("is-open");
-      });
-    }
-
-    // Settings button
-    const settingsBtn = document.getElementById("nav-settings-btn");
-    if (settingsBtn) {
-      settingsBtn.addEventListener("click", function () {
-        if (userDropdown) userDropdown.classList.remove("is-open");
-        openModal("nav-settings-modal");
       });
     }
 
@@ -217,9 +274,10 @@
   // --- Inject footer ---
   const footerEl = document.getElementById("site-footer");
   if (footerEl) {
+    const changelogPath = base + 'pages/changelog/changelog.html';
     footerEl.innerHTML = `
       <footer>
-        <p>&copy; DEADLINE 22/5/2026.</p>
+        <p>&copy; Protocol &mdash; <a href="${changelogPath}" style="color:inherit;text-decoration:underline;opacity:.7;">Changelog</a></p>
       </footer>
     `;
   }
@@ -609,11 +667,20 @@
     }
     const toastContainer = document.getElementById("toast-container");
     let lastNotifId = null;
-    const shownToastIds = new Set();
+    // Persist shown toast IDs across page navigations using sessionStorage
+    const SS_KEY = 'protocol_shown_notifs';
+    function loadShownIds() {
+      try { return new Set(JSON.parse(sessionStorage.getItem(SS_KEY) || '[]')); } catch { return new Set(); }
+    }
+    function saveShownIds(set) {
+      try { sessionStorage.setItem(SS_KEY, JSON.stringify([...set])); } catch {}
+    }
+    const shownToastIds = loadShownIds();
 
     function showToast(notif) {
       if (shownToastIds.has(notif.id)) return;
       shownToastIds.add(notif.id);
+      saveShownIds(shownToastIds);
 
       const icon = notif.type === "message" ? "💬" : "🗨️";
       const sender = notif.sender_name || "Someone";
@@ -707,6 +774,7 @@
     if (bellEl && bellDropdown) {
       bellEl.addEventListener("click", async function(e) {
         e.stopPropagation();
+        closeAllDropdowns('nav-bell-dropdown');
         bellDropdown.classList.toggle("is-open");
         if (bellDropdown.classList.contains("is-open")) {
           try {

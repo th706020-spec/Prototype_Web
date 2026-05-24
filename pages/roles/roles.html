@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roles – Protocol</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="roles.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="roles-main">
+    <div class="roles-container">
+      <header class="roles-header">
+        <h1>Roles & Permissions</h1>
+        <p>Choose the role that fits your contribution to Protocol. Some roles require approval or a special key.</p>
+      </header>
+
+      <div id="current-role-banner" class="current-role-banner" style="display:none">
+        <span id="current-role-icon">🔓</span>
+        <div>
+          <div class="current-role-label">Your current role</div>
+          <div id="current-role-name" class="current-role-name">Member</div>
+        </div>
+      </div>
+
+      <div class="roles-grid">
+
+        <!-- Member -->
+        <div class="role-card" data-role="member">
+          <div class="role-card-icon">👤</div>
+          <h3>Member</h3>
+          <p class="role-desc">Base role for all signed-up users. Access to forums, documents, and chat.</p>
+          <ul class="role-perks">
+            <li>Browse &amp; participate in forums</li>
+            <li>Upload and view documents</li>
+            <li>Chat with other users</li>
+          </ul>
+          <div class="role-badge free">Free</div>
+          <button class="btn btn-outline role-btn" data-action="request" data-role="member">Select</button>
+        </div>
+
+        <!-- Premium Member -->
+        <div class="role-card" data-role="premium">
+          <div class="role-card-icon">⭐</div>
+          <h3>Premium Member</h3>
+          <p class="role-desc">Unlock extra perks: priority support, larger upload limits, and exclusive content.</p>
+          <ul class="role-perks">
+            <li>Everything in Member</li>
+            <li>100 MB file uploads</li>
+            <li>Exclusive premium channels</li>
+            <li>Priority forum ranking</li>
+          </ul>
+          <div class="role-badge premium">Premium</div>
+          <button class="btn btn-primary role-btn" data-action="premium" data-role="premium">Upgrade</button>
+        </div>
+
+        <!-- Mentor -->
+        <div class="role-card" data-role="mentor">
+          <div class="role-card-icon">🎓</div>
+          <h3>Mentor</h3>
+          <p class="role-desc">Guide students and researchers. Requires admin approval.</p>
+          <ul class="role-perks">
+            <li>Mentor badge on profile</li>
+            <li>Create mentorship sessions</li>
+            <li>Pin posts in your topics</li>
+          </ul>
+          <div class="role-badge approval">Needs Approval</div>
+          <button class="btn btn-outline role-btn" data-action="request" data-role="mentor">Apply</button>
+        </div>
+
+        <!-- Researcher -->
+        <div class="role-card" data-role="researcher">
+          <div class="role-card-icon">🔬</div>
+          <h3>Researcher</h3>
+          <p class="role-desc">For academics and scientists sharing original research. Requires admin approval.</p>
+          <ul class="role-perks">
+            <li>Researcher badge on profile</li>
+            <li>Publish verified research posts</li>
+            <li>Access research-only documents</li>
+          </ul>
+          <div class="role-badge approval">Needs Approval</div>
+          <button class="btn btn-outline role-btn" data-action="request" data-role="researcher">Apply</button>
+        </div>
+
+        <!-- Moderator -->
+        <div class="role-card" data-role="mod">
+          <div class="role-card-icon">🛡️</div>
+          <h3>Moderator</h3>
+          <p class="role-desc">Help keep the community safe and on-topic. Requires admin approval.</p>
+          <ul class="role-perks">
+            <li>Mod badge on profile</li>
+            <li>Remove inappropriate content</li>
+            <li>Pin/unpin any forum post</li>
+          </ul>
+          <div class="role-badge approval">Needs Approval</div>
+          <button class="btn btn-outline role-btn" data-action="request" data-role="mod">Apply</button>
+        </div>
+
+        <!-- Admin -->
+        <div class="role-card admin-card" data-role="admin">
+          <div class="role-card-icon">🔑</div>
+          <h3>Admin</h3>
+          <p class="role-desc">Full platform control. Requires a secret admin key.</p>
+          <ul class="role-perks">
+            <li>Everything in Moderator</li>
+            <li>Manage all users &amp; roles</li>
+            <li>Delete any content</li>
+            <li>Access admin dashboard</li>
+          </ul>
+          <div class="role-badge key">Secret Key Required</div>
+          <button class="btn btn-outline role-btn" data-action="admin-key" data-role="admin">Enter Key</button>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Role Request Modal -->
+  <div id="role-modal" class="modal-overlay" style="display:none">
+    <div class="modal-box role-modal-box">
+      <button class="modal-close" id="role-modal-close">&times;</button>
+      <h2 id="role-modal-title">Apply for Role</h2>
+      <p id="role-modal-desc"></p>
+      <div id="role-modal-body"></div>
+      <div class="role-modal-actions">
+        <button class="btn btn-outline" id="role-modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="role-modal-confirm">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="../../js/config.js"></script>
+  <script src="../../js/auth.js"></script>
+  <script src="../../js/nav.js"></script>
+  <script src="roles.js"></script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog · Protocol</title>
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="changelog.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="cl-container">
+    <div class="cl-hero">
+      <h1 class="cl-title">📋 Changelog</h1>
+      <p class="cl-subtitle">A record of everything that has been built, fixed, and improved in Protocol.</p>
+    </div>
+
+    <div class="cl-timeline">
+
+      <!-- Batch 10 -->
+      <div class="cl-entry">
+        <div class="cl-badge cl-badge--new">Latest</div>
+        <div class="cl-card">
+          <div class="cl-card-header">
+            <h2 class="cl-version">Batch 10 — Polish & More Themes</h2>
+            <span class="cl-date">May 2026</span>
+          </div>
+          <ul class="cl-list">
+            <li>✅ Added 4 new themes: <strong>Claude</strong>, <strong>Tide</strong>, <strong>Catppuccin Mocha</strong>, <strong>Caffeine</strong></li>
+            <li>✅ Fixed AI subpage card/panel styling — now respects all themes using CSS variables</li>
+            <li>✅ Added changelog page (this page!) — linked in footer</li>
+            <li>✅ Fixed Roles page showing account settings popup on load</li>
+            <li>✅ Added mobile peek tabs for Chat sidebars (left: Chats, right: Members)</li>
+            <li>✅ Mobile sidebar redesign — slide-over panels with close buttons</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Batch 9 -->
+      <div class="cl-entry">
+        <div class="cl-badge">Batch 9</div>
+        <div class="cl-card">
+          <div class="cl-card-header">
+            <h2 class="cl-version">Batch 9 — Pre-Ship Sprint</h2>
+            <span class="cl-date">May 2026</span>
+          </div>
+          <ul class="cl-list">
+            <li>✅ Replaced theme cycle button with a 10-option theme dropdown</li>
+            <li>✅ Single-open-at-a-time logic for all navbar dropdowns</li>
+            <li>✅ Mobile responsiveness — general pages + chat page</li>
+            <li>✅ Created dedicated <strong>Roles</strong> page with role request/approval flow</li>
+            <li>✅ Created dedicated <strong>Settings</strong> page (Zen browser style)</li>
+            <li>✅ Global font switcher — JetBrains Mono, Fira Code, Victor Mono, etc.</li>
+            <li>✅ Notification deduplication — toasts no longer repeat on page switch</li>
+            <li>✅ Chat timestamp UTC fix — times now show in user's local timezone</li>
+            <li>✅ Chat online indicator fix — now reads from actual server state</li>
+            <li>✅ Removed stray "Trang Chủ" back-button from Documents page</li>
+            <li>✅ Admin secret key added to .env</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Batch 8 -->
+      <div class="cl-entry">
+        <div class="cl-badge">Batch 8</div>
+        <div class="cl-card">
+          <div class="cl-card-header">
+            <h2 class="cl-version">Batch 8 — Themes, Docs, ASCII</h2>
+            <span class="cl-date">May 2026</span>
+          </div>
+          <ul class="cl-list">
+            <li>✅ Added 4 more themes: Gruvbox, Sage, Nord, Tokyo Night</li>
+            <li>✅ ASCII animation colors adapt per theme</li>
+            <li>✅ Docs: description box on upload, author delete/edit, admin controls</li>
+            <li>✅ Forum file size limit raised to 100 MB</li>
+            <li>✅ Forum: added video and document file support</li>
+            <li>✅ Chat: upload progress bar above chat input</li>
+            <li>✅ Chat: image/video preview in messages</li>
+            <li>✅ Chat: reload heartbeat no longer re-fetches video blobs (no more stuttering)</li>
+            <li>✅ ASCII wave background added to bottom of index page</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Batch 7 -->
+      <div class="cl-entry">
+        <div class="cl-badge">Batch 7</div>
+        <div class="cl-card">
+          <div class="cl-card-header">
+            <h2 class="cl-version">Batch 7 — UI Animations & Dark Mode</h2>
+            <span class="cl-date">May 2026</span>
+          </div>
+          <ul class="cl-list">
+            <li>✅ ASCII card hover animations on index page (Doc, Forum, Connect, AI Tools)</li>
+            <li>✅ ASCII spinning donut improved — more visible, better colours</li>
+            <li>✅ Dark mode: light/dark theme toggle now persists across all pages</li>
+            <li>✅ Dark mode: doc preview no longer inherits dark background</li>
+            <li>✅ Index footer polish — ASCII wave section</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Batch 6 -->
+      <div class="cl-entry">
+        <div class="cl-badge">Batch 6</div>
+        <div class="cl-card">
+          <div class="cl-card-header">
+            <h2 class="cl-version">Batch 6 — Chat Overhaul & Notifications</h2>
+            <span class="cl-date">April 2026</span>
+          </div>
+          <ul class="cl-list">
+            <li>✅ Chat: message grouping by 10-min windows (Messenger-style)</li>
+            <li>✅ Chat: exact timestamp shown on hover</li>
+            <li>✅ Chat: history sidebar (left) + member list sidebar (right, Discord-style)</li>
+            <li>✅ Chat: "Find Mentor" button sticky at bottom of right sidebar</li>
+            <li>✅ Chat: avatar visible to self + circular upload progress indicator</li>
+            <li>✅ Global notification system — slide-in toast with content preview</li>
+            <li>✅ Notifications clickable — navigate to source page</li>
+            <li>✅ Online status tracked globally across all pages (not just Chat)</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Batch 5 -->
+      <div class="cl-entry">
+        <div class="cl-badge">Batch 5</div>
+        <div class="cl-card">
+          <div class="cl-card-header">
+            <h2 class="cl-version">Batch 5 — Server Overhaul & Roles</h2>
+            <span class="cl-date">April 2026</span>
+          </div>
+          <ul class="cl-list">
+            <li>✅ Premium locked behind payment flow (dev key bypass for testing)</li>
+            <li>✅ Role system: member, premium, mentor, researcher, mod, admin</li>
+            <li>✅ Admin secret key to elevate to admin role</li>
+            <li>✅ Mentor/Researcher/Mod require admin approval (pending system)</li>
+            <li>✅ Forum: polls now sync to server and are visible to all users</li>
+            <li>✅ Forum: image posting fixed (server now persists uploads)</li>
+            <li>✅ Forum: vote spam prevention (debounce)</li>
+            <li>✅ Forum: comment count now displays correctly</li>
+            <li>✅ Forum: only OG poster + admins/mods can pin posts</li>
+            <li>✅ Online presence tracked via heartbeat — updates in real time</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Batch 4 -->
+      <div class="cl-entry">
+        <div class="cl-badge">Batch 4</div>
+        <div class="cl-card">
+          <div class="cl-card-header">
+            <h2 class="cl-version">Batch 4 — Dropdowns, Premium, Chat</h2>
+            <span class="cl-date">March 2026</span>
+          </div>
+          <ul class="cl-list">
+            <li>✅ Navbar dropdown for user profile</li>
+            <li>✅ Premium membership page with upgrade flow</li>
+            <li>✅ Chat: real-time messaging via WebSocket / polling</li>
+            <li>✅ AI subpage navbar hooked to main index</li>
+            <li>✅ Documentation updates</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Batch 1–3 -->
+      <div class="cl-entry">
+        <div class="cl-badge">Batch 1–3</div>
+        <div class="cl-card">
+          <div class="cl-card-header">
+            <h2 class="cl-version">Batch 1–3 — Foundation</h2>
+            <span class="cl-date">Feb – Mar 2026</span>
+          </div>
+          <ul class="cl-list">
+            <li>✅ Project scaffold — Node.js + Express backend, SQLite database</li>
+            <li>✅ Auth system: registration, login, JWT sessions</li>
+            <li>✅ Index page with ASCII donut animation and card grid</li>
+            <li>✅ Documents page: upload, preview, search</li>
+            <li>✅ Forum page: post, comment, vote, search, dark mode</li>
+            <li>✅ Connect/Chat page: 1-to-1 messaging, member list</li>
+            <li>✅ AI Tools subpage with multiple tool cards</li>
+            <li>✅ About page</li>
+            <li>✅ File uploads: images, documents</li>
+            <li>✅ Dark mode — toggle with localStorage persistence</li>
+          </ul>
+        </div>
+      </div>
+
+    </div><!-- /.cl-timeline -->
+  </main>
+
+  <script src="../../js/nav.js"></script>
+</body>
+</html>

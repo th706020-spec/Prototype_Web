@@ -34,21 +34,24 @@
 ├── server.js               # Express backend (all routes)
 ├── package.json
 ├── connects.db             # SQLite database (git-ignored)
-├── .env                    # JWT_SECRET etc. (git-ignored)
+├── .env                    # JWT_SECRET, ADMIN_SECRET_KEY (git-ignored)
 ├── css/
-│   ├── style.css           # Global shared styles + CSS variable system
+│   ├── style.css           # Global shared styles + CSS variable system (10 themes)
 │   └── documents.css       # Document page styles
 ├── js/
 │   ├── config.js           # window.AppConfig.API — the only place to set the API base URL
 │   ├── auth.js             # window.Auth JWT helpers
-│   ├── nav.js              # Shared navbar, footer, auth modals, theme toggle, user dropdown
+│   ├── nav.js              # Shared navbar, footer, auth modals, theme dropdown, user dropdown, font loader
 │   └── documents.js        # Document page logic
 ├── pages/
 │   ├── AIs/                # ais.html, ais.css, ais.js — AI tools hub
+│   ├── changelog/          # changelog.html, changelog.css — project changelog (linked in footer)
 │   ├── chat/               # connects.html, navc.js, stylec.css — real-time chat
 │   ├── doc/                # documents.html — document library
 │   ├── forum/              # forum.html, forum.js, forum.css — forum
-│   └── premium/            # premium.html, premium.css — upgrade page
+│   ├── premium/            # premium.html, premium.css — upgrade page
+│   ├── roles/              # roles.html, roles.js, roles.css — role selection/request page
+│   └── settings/           # settings.html, settings.js, settings.css — user settings page
 └── uploads/                # Uploaded files (git-ignored)
     ├── avatars/
     └── chat-files/
@@ -74,31 +77,38 @@ Always use these variables — never hardcode colors for structural elements:
 | `--shadow-sm`, `--shadow-md` | Box shadows |
 | `--transition` | Default transition duration |
 
-### Multi-Theme System (Batch 8)
-Protocol now supports **6 themes** instead of simple dark/light:
-1. **Light** 🌙 — Blue accent `#3a6cf4`
-2. **Dark** ☀️ — Lighter blue `#5b85f6`
+### Multi-Theme System (Batch 8–10)
+Protocol now supports **10 themes**:
+1. **Light** ☀️ — Blue accent `#3a6cf4`
+2. **Dark** 🌙 — Lighter blue `#5b85f6`
 3. **Gruvbox** 🟤 — Amber `#d79921`
 4. **Sage** 🌿 — Green `#5d8a5e`
 5. **Nord** ❄️ — Cyan `#88c0d0`
 6. **Tokyo Night** 🌸 — Blue-purple `#7aa2f7`
+7. **Claude** 🤖 — Warm cream/terracotta `#d97757`
+8. **Tide** 🌊 — Ocean teal `#4fc3c8`
+9. **Catppuccin Mocha** 🐱 — Pastel purple `#cba6f7`
+10. **Caffeine** ☕ — Dark amber `#e8a045`
 
 **Implementation:**
 - Theme name stored in `localStorage.getItem('theme')`
 - Body gets class: `theme-{name}` for non-light themes, `dark` for dark theme, nothing for light
 - Each theme has its own CSS `body.theme-{name}` block in `css/style.css` that overrides color vars
-- `nav.js` has `applyTheme(name)` function; theme button cycles through all 6
+- `nav.js` has `applyTheme(name)` function; theme dropdown (`#nav-theme-dropdown`) shows all 10 options
 - bfcache fix: `pageshow` event re-applies theme class to prevent revert on browser back/forward
+- Settings page (`pages/settings/settings.html`) has a `<select>` with all 10 theme options
 
 **ASCII animations** are **theme-aware**:
 - All inline scripts (donut, card hover, background wave) call `getThemeRGB()` helper
 - This reads the current theme and returns `[r, g, b]` for that theme's accent color
 - Animations update color in real-time when theme switches
+- `getThemeRGB()` in `index.html` has entries for all 10 themes
 
 **When adding new UI components:**
 - Use CSS vars for colors
-- Add `body.theme-gruvbox`, `body.theme-nord`, `body.theme-tokyo` overrides if using hardcoded colors (sage/light auto-inherit from light theme vars)
+- Add `body.theme-{name}` overrides if using hardcoded colors (light/claude auto-inherit from light theme vars)
 - For ASCII/canvas animations: use the `getThemeRGB()` pattern (see `index.html` line 116+)
+- When adding a new theme: update `getThemeRGB()` map, `THEMES`/`THEME_ICONS`/`THEME_LABELS` arrays in `nav.js`, dropdown HTML in nav.js, settings `<select>` in `settings.html`, and `applyTheme()`'s `classList.remove(...)` list
 
 ---
 
@@ -257,26 +267,36 @@ File uploads in chat now display real-time progress:
 ## 11. Navbar & `nav.js`
 
 `nav.js` runs on every page and:
-1. Injects navbar HTML (logo, links, user box or login/signup buttons, theme toggle)
-2. Injects footer
-3. Injects auth modals (login, signup, settings)
-4. Sets up: theme toggle, avatar upload, user dropdown, logout, settings forms
+1. Injects navbar HTML (logo, links, user box or login/signup buttons, theme dropdown)
+2. Injects footer (with Changelog link)
+3. Injects auth modals (login, signup)
+4. Sets up: theme dropdown (10 options), avatar upload, user dropdown, logout
+5. Applies global font from `localStorage.protocol_font` via `applyGlobalFont()` IIFE
 
 **User dropdown** (logged-in state):
 - `.nav-user-box` wraps avatar + username + `▾` chevron
 - `.nav-user-dropdown.is-open` shows the dropdown panel
-- Dropdown includes avatar (clickable to change), name, email, joined date, tier badge, Settings button, Log Out
+- Dropdown includes avatar (clickable to change), name, email, joined date, tier badge, Settings button (navigates to `pages/settings/settings.html`), Log Out
 
-**Settings modal** (`#nav-settings-modal`):
-- Change Username (PATCH `/api/auth/username`)
-- Change Password (PATCH `/api/auth/password`)
-- Member Status + upgrade link to `/pages/premium/premium.html`
+**Single-open dropdown system:**
+- `_dropdowns` array: `['nav-theme-dropdown', 'nav-user-dropdown', 'nav-bell-dropdown']`
+- `closeAllDropdowns(except)` closes all dropdowns not matching the passed ID
+- Each toggle calls `closeAllDropdowns('own-id')` before opening itself
 
-**Theme toggle:**
-- Navbar button cycles through 6 themes with emoji indicator
-- `applyTheme(name)` removes all theme classes, adds the new one
+**Theme dropdown:**
+- `#nav-theme-picker` wraps `#nav-theme-dropdown` (list of 10 `.nav-theme-option` buttons)
+- `applyTheme(name)` removes all theme classes, adds the correct one, marks active option
 - Persists to `localStorage.setItem('theme', name)`
-- Auto-restores on page load via bfcache `pageshow` handler
+- Auto-restores on page load + bfcache `pageshow` event
+
+**Global font loader (`applyGlobalFont()` IIFE at top of nav.js):**
+- Runs immediately on every page
+- Reads `localStorage.protocol_font`
+- Injects `<link id="nav-font-link">` with Google Fonts URL
+- Sets `document.body.style.fontFamily` to the selected font
+- Font can be changed in Settings page; 5 options: System default, JetBrains Mono, Fira Code, Victor Mono, Source Code Pro
+
+**Navbar links (in order):** Home, Documents, Forum, Connect, AI Tools, Roles, About
 
 ---
 
@@ -300,6 +320,53 @@ main { position: relative; overflow: hidden; }
 ```
 
 All other on-page ASCII animations (donut, card hovers) also use `getThemeRGB()`.
+
+---
+
+## 11.6. Settings Page (`pages/settings/`)
+
+Zen browser-style settings layout:
+- **Left sidebar** (nav links): User, Customization
+- **Right content area** (3/4 width): actual settings fields
+
+**User section:**
+- Display username, joined date, tier
+- Change username (POST `/api/auth/username`)
+- Change password (POST `/api/auth/password`)
+- Avatar upload with circular progress bar
+- Log out button
+
+**Customization section:**
+- Font picker: 5 options stored in `localStorage.protocol_font`, applied globally via nav.js IIFE
+- Theme selector: 10 options, applied via same `applyTheme()` logic as navbar dropdown
+- Custom CSS textarea (placeholder only — no execution yet)
+
+**Important**: `settings.html` has its own `<link id="custom-font-link">` — do not use the same ID as nav.js's `nav-font-link`.
+
+---
+
+## 11.7. Roles Page (`pages/roles/`)
+
+Grid of 6 role cards: Member, Premium, Mentor, Researcher, Mod, Admin.
+
+**Role change flows:**
+- **Premium**: redirects to `/pages/premium/premium.html`
+- **Mentor / Researcher / Mod**: `POST /api/auth/request-role` → creates pending request; admin must approve via `PATCH /api/auth/set-role`
+- **Admin**: requires `ADMIN_SECRET_KEY` from `.env` (default: `protocol-admin-2025`); sent in body of `PATCH /api/auth/set-role`
+
+**Important CSS fix:** `roles.css` scopes its modal to `#role-modal` (NOT `.modal-overlay`) to avoid overriding `style.css`'s global `display: none` rule that hides all modals by default.
+
+---
+
+## 11.8. Mobile Chat Sidebars (`pages/chat/`)
+
+On screens ≤ 768px, both sidebars are hidden by default and revealed via peek tabs:
+- `#chat-peek-left` — left edge tab (`💬 Chats`, vertical text, `writing-mode: vertical-rl`)
+- `#chat-peek-right` — right edge tab (`👥 Members`, vertical text)
+- Peek tabs have `display: none` on desktop, `display: flex` on mobile
+- Both sidebars use `.mobile-open` class with `transform: translateX(0)`
+- `openMobileSidebar(side)` / `closeMobileSidebar()` in `navc.js` manage state
+- `#chat-sidebar-backdrop` closes active sidebar when tapped
 
 ---
 
@@ -335,7 +402,7 @@ All other on-page ASCII animations (donut, card hovers) also use `getThemeRGB()`
 
 ---
 
-## 13. Dark Mode Checklist
+## 13. Dark/Theme Mode Checklist
 
 When adding any new UI component, verify:
 - [ ] All backgrounds use `var(--clr-surface)` or `var(--clr-bg)` (not hardcoded)
@@ -343,6 +410,8 @@ When adding any new UI component, verify:
 - [ ] Borders use `var(--clr-border)`
 - [ ] A `body.dark` override block exists for any component using hardcoded colors
 - [ ] Inputs have dark background + light text in dark mode
+- [ ] New page-specific CSS files derive colors from global vars (see `ais.css` `:root` using `var(--clr-*)`)
+- [ ] ASCII/canvas colors call `getThemeRGB()` so all 10 themes are supported
 
 ---
 

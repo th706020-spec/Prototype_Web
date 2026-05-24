@@ -116,12 +116,16 @@
     function getThemeRGB() {
       var theme = localStorage.getItem('theme') || 'light';
       var map = {
-        light:   [58,  108, 244],
-        dark:    [91,  133, 246],
-        gruvbox: [215, 153, 33],
-        sage:    [93,  138, 94],
-        nord:    [136, 192, 208],
-        tokyo:   [122, 162, 247],
+        light:      [58,  108, 244],
+        dark:       [91,  133, 246],
+        gruvbox:    [215, 153, 33],
+        sage:       [93,  138, 94],
+        nord:       [136, 192, 208],
+        tokyo:      [122, 162, 247],
+        claude:     [217, 119, 87],
+        tide:       [79,  195, 200],
+        catppuccin: [203, 166, 247],
+        caffeine:   [232, 160, 69],
       };
       return map[theme] || map.light;
     }
@@ -330,7 +334,7 @@
       var ctx = canvas.getContext('2d');
 
       // Characters sorted by visual density (space = empty, # = dense)
-      var ASCII_CHARS = ' .:-+*=%@#';
+      var ASCII_CHARS = ' @B%8&MNHW#*+i;:.,_░▒';
       var CELL = 14; // px per character cell
 
       var mouseX = -9999, mouseY = -9999;
