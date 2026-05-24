@@ -72,6 +72,8 @@
       <nav class="navbar" role="navigation" aria-label="Main navigation">
         <div class="navbar-inner">
 
+          <button class="nav-hamburger" id="nav-hamburger" aria-label="Open navigation menu" aria-expanded="false">☰</button>
+
           <ul class="navbar-links">
             <li><a href="${base}index.html">Home</a></li>
             <li><a href="#">About</a></li>
@@ -113,6 +115,13 @@
           </div>
 
         </div>
+
+        <!-- Mobile navigation drawer -->
+        <div class="nav-mobile-menu" id="nav-mobile-menu" aria-hidden="true">
+          <a href="${base}index.html" class="nav-mobile-link">🏠 Home</a>
+          <a href="#" class="nav-mobile-link">ℹ️ About</a>
+          <a href="${base}pages/roles/roles.html" class="nav-mobile-link">🎭 Roles</a>
+        </div>
       </nav>
     `;
 
@@ -120,6 +129,35 @@
     navEl.querySelectorAll(".navbar-links a").forEach(function (link) {
       if (link.href === window.location.href) link.classList.add("active");
     });
+
+    // ---- Hamburger menu (mobile) ----
+    const hamburgerBtn = document.getElementById("nav-hamburger");
+    const mobileMenu = document.getElementById("nav-mobile-menu");
+    if (hamburgerBtn && mobileMenu) {
+      hamburgerBtn.addEventListener("click", function(e) {
+        e.stopPropagation();
+        const isOpen = mobileMenu.classList.toggle("open");
+        hamburgerBtn.setAttribute("aria-expanded", isOpen);
+        mobileMenu.setAttribute("aria-hidden", !isOpen);
+        hamburgerBtn.textContent = isOpen ? "✕" : "☰";
+      });
+      mobileMenu.querySelectorAll("a").forEach(function(link) {
+        link.addEventListener("click", function() {
+          mobileMenu.classList.remove("open");
+          hamburgerBtn.setAttribute("aria-expanded", "false");
+          mobileMenu.setAttribute("aria-hidden", "true");
+          hamburgerBtn.textContent = "☰";
+        });
+      });
+      document.addEventListener("click", function(e) {
+        if (!navEl.contains(e.target)) {
+          mobileMenu.classList.remove("open");
+          hamburgerBtn.setAttribute("aria-expanded", "false");
+          mobileMenu.setAttribute("aria-hidden", "true");
+          hamburgerBtn.textContent = "☰";
+        }
+      });
+    }
 
     // ---- Multi-theme system ----
     const THEMES = ['light', 'dark', 'gruvbox', 'sage', 'nord', 'tokyo', 'claude', 'tide', 'catppuccin', 'caffeine'];

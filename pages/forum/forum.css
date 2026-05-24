@@ -88,10 +88,10 @@ img.comment-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: 
 .cancel-reply-btn:hover { color: #ef4444; }
 
 /* UI KHẢO SÁT (POLL) */
-.poll-option-row { padding: 10px 14px; border: 1px solid var(--clr-border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; background: #fff; }
+.poll-option-row { padding: 10px 14px; border: 1px solid var(--clr-border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; background: var(--clr-surface); }
 .poll-option-row:hover { border-color: var(--clr-primary); }
-.poll-option-row.selected { border-color: var(--clr-primary); background: #eef1fb; font-weight: bold; }
-.poll-bar { height: 8px; background: #e2e8f0; border-radius: 99px; margin-top: 6px; overflow: hidden; }
+.poll-option-row.selected { border-color: var(--clr-primary); background: var(--clr-card-hover); font-weight: bold; }
+.poll-bar { height: 8px; background: var(--clr-border); border-radius: 99px; margin-top: 6px; overflow: hidden; }
 .poll-fill { height: 100%; background: var(--clr-primary); transition: width 0.3s ease; }
 
 /* WIDGET CỘT PHẢI */
@@ -171,9 +171,6 @@ body.dark .comment-text { color: var(--clr-muted); }
 body.dark .tag-badge { background: #1e293b; color: #94a3b8; }
 body.dark .tag-badge:hover { background: #1e3a5f; color: var(--clr-primary); }
 body.dark .search-input { background: #1e293b !important; color: var(--clr-text) !important; }
-body.dark .poll-option-row { background: #1e293b; }
-body.dark .poll-option-row.selected { background: #1e3a5f; }
-body.dark .poll-bar { background: #334155; }
 body.dark .file-attachment { background: #1e293b; }
 body.dark .comment-reply-snippet { background: #1e293b; }
 body.dark .reply-indicator { background: #1e3a5f; }

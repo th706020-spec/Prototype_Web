@@ -156,6 +156,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Group messages within 10 minutes from same sender
   function toUtcDate(ts) {
     if (!ts) return new Date(0);
+    if (typeof ts === 'number') return new Date(ts);
     return new Date(ts.includes('Z') || ts.includes('+') ? ts : ts + 'Z');
   }
 

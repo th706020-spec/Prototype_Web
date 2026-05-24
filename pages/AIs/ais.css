@@ -37,8 +37,8 @@
 }
 
 .ai-card {
-  background: var(--ai-surface);
-  border: 1px solid var(--ai-border);
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
   border-radius: 16px;
   padding: 22px;
   display: grid;
@@ -117,8 +117,8 @@ body.dark .ai-settings-banner {
 }
 
 .ai-panel {
-  background: var(--ai-surface);
-  border: 1px solid var(--ai-border);
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 20px;
@@ -148,7 +148,7 @@ body.dark .ai-settings-banner {
 .ai-textarea,
 .ai-select-trigger {
   width: 100%;
-  border: 1px solid var(--ai-border);
+  border: 1px solid var(--clr-border);
   border-radius: 10px;
   padding: 10px 12px;
   font-size: .95rem;
@@ -860,47 +860,41 @@ body.dark {
   --ai-muted: #94a3b8;
 }
 
-body.dark .ai-panel,
-body.dark .ai-card {
-  background: var(--ai-surface);
-  border-color: var(--ai-border);
-}
-
 body.dark .ai-input,
 body.dark .ai-textarea,
 body.dark .ai-select-trigger,
 body.dark .ai-dropdown-button {
-  background: #0f172a;
-  border-color: var(--ai-border);
-  color: #e2e8f0;
+  background: var(--clr-bg);
+  border-color: var(--clr-border);
+  color: var(--clr-text);
 }
 
 body.dark .ai-input::placeholder,
 body.dark .ai-textarea::placeholder {
-  color: rgba(226, 232, 240, 0.45);
+  color: var(--clr-muted);
 }
 
 body.dark .ai-select-menu,
 body.dark .ai-dropdown-menu {
-  background: #1e293b;
-  border-color: var(--ai-border);
+  background: var(--clr-surface);
+  border-color: var(--clr-border);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
 }
 
 body.dark .ai-select-option,
 body.dark .ai-dropdown-item {
-  color: #e2e8f0;
+  color: var(--clr-text);
 }
 
 body.dark .ai-select-option:hover,
 body.dark .ai-dropdown-item:hover {
-  background: #0f172a;
+  background: var(--clr-card-hover);
 }
 
 body.dark .ai-status {
-  background: #1e293b;
-  border-color: var(--ai-border);
-  color: #e2e8f0;
+  background: var(--clr-surface);
+  border-color: var(--clr-border);
+  color: var(--clr-text);
 }
 
 body.dark .ai-status--error {
