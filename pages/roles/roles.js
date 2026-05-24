@@ -165,6 +165,66 @@
     } catch { alert('Network error.'); }
   }
 
+  // ── Admin/Mod: Pending Role Requests ─────────────────────
+  async function initPendingRequests() {
+    const user = getUser();
+    if (!user || !['admin', 'mod'].includes(user.role)) return;
+    const section = document.getElementById('pending-requests-section');
+    if (section) section.style.display = 'block';
+    await loadPendingRequests();
+    document.getElementById('refresh-requests-btn')?.addEventListener('click', loadPendingRequests);
+  }
+
+  async function loadPendingRequests() {
+    const list = document.getElementById('pending-requests-list');
+    if (!list) return;
+    list.innerHTML = '<p class="pending-empty">Loading…</p>';
+    try {
+      const r = await fetch(`${API}/admin/role-requests`, { headers: { Authorization: `Bearer ${getToken()}` } });
+      if (!r.ok) { list.innerHTML = '<p class="pending-empty">Failed to load requests.</p>'; return; }
+      const items = await r.json();
+      if (!items.length) { list.innerHTML = '<p class="pending-empty">No pending requests. 🎉</p>'; return; }
+      const user = getUser();
+      const isAdmin = user?.role === 'admin';
+      list.innerHTML = items.map(req => `
+        <div class="pending-request-card" id="req-${req.id}">
+          <div class="pending-request-info">
+            <div class="pending-request-user">👤 ${req.username} <span style="color:var(--clr-muted);font-weight:400;">&lt;${req.email}&gt;</span></div>
+            <div class="pending-request-meta">
+              <span class="pending-request-role">${ROLE_LABELS[req.requested_role] || req.requested_role}</span>
+              Requested ${new Date(req.created_at).toLocaleDateString()}
+            </div>
+          </div>
+          ${isAdmin ? `
+          <div class="pending-request-actions">
+            <button class="btn approve small" onclick="handleRoleDecision(${req.id}, 'approve')">✓ Approve</button>
+            <button class="btn deny small" onclick="handleRoleDecision(${req.id}, 'deny')">✗ Deny</button>
+          </div>` : `<span style="font-size:0.82rem;color:var(--clr-muted)">Awaiting admin action</span>`}
+        </div>`).join('');
+    } catch { list.innerHTML = '<p class="pending-empty">Error loading requests.</p>'; }
+  }
+
+  window.handleRoleDecision = async function(id, action) {
+    try {
+      const r = await fetch(`${API}/admin/role-requests/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ action }),
+      });
+      const d = await r.json();
+      if (!r.ok) { alert(d.error || 'Failed'); return; }
+      const card = document.getElementById(`req-${id}`);
+      if (card) {
+        card.style.opacity = '0.5';
+        card.style.pointerEvents = 'none';
+        card.querySelector('.pending-request-actions').innerHTML =
+          `<span style="font-size:0.85rem;color:${action === 'approve' ? '#22c55e' : '#ef4444'}">${action === 'approve' ? '✓ Approved' : '✗ Denied'}</span>`;
+        setTimeout(() => { card.remove(); }, 2000);
+      }
+    } catch { alert('Network error.'); }
+  };
+
   // ── Init ─────────────────────────────────────────────
   initCurrentRole();
+  initPendingRequests();
 })();

@@ -674,7 +674,7 @@ function generatePostHTML(post, isThreadView = false) {
   if (canView && post.type === 'poll') {
     const safeOptions = Array.isArray(post.pollOptions) ? post.pollOptions : [];
     const totalPollVotes = safeOptions.reduce((sum, opt) => sum + (Number(opt.votes) || 0), 0);
-    pollHTML = `<div style="background:#f8fafc; padding:16px; border-radius:12px; margin-bottom:16px; border: 1px solid var(--clr-border);">`;
+    pollHTML = `<div style="background:var(--clr-surface); padding:16px; border-radius:12px; margin-bottom:16px; border: 1px solid var(--clr-border);">`;
     
     if (post.currentUserPollVote !== null && post.currentUserPollVote !== undefined) {
       safeOptions.forEach(opt => {
@@ -685,7 +685,7 @@ function generatePostHTML(post, isThreadView = false) {
             <div style="display:flex; justify-content:space-between; font-size:0.95rem; font-weight: ${isMyVote ? 'bold' : 'normal'}; color: ${isMyVote ? 'var(--clr-primary)' : 'var(--clr-text)'};">
               <span>${opt.text} ${isMyVote ? '✓' : ''}</span><span>${percent}%</span>
             </div>
-            <div class="poll-bar"><div class="poll-fill" style="width:${percent}%; background: ${isMyVote ? 'var(--clr-primary)' : '#94a3b8'};"></div></div>
+            <div class="poll-bar"><div class="poll-fill" style="width:${percent}%; background: ${isMyVote ? 'var(--clr-primary)' : 'var(--clr-muted)'};"></div></div>
           </div>`;
       });
       pollHTML += `<div style="text-align:right; margin-top:16px;"><button class="forum-btn outline small" onclick="resetPollVote(${post.id})">↺ Vote lại</button></div>`;

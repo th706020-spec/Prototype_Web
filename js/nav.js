@@ -807,7 +807,10 @@
     }
 
     fetchNotifications();
-    setInterval(fetchNotifications, 30000);
+    // Poll every 8 seconds; skip when tab is hidden to save bandwidth
+    setInterval(function() {
+      if (document.visibilityState !== 'hidden') fetchNotifications();
+    }, 8000);
 
     if (bellEl && bellDropdown) {
       bellEl.addEventListener("click", async function(e) {

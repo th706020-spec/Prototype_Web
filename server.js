@@ -411,7 +411,7 @@ app.post("/api/auth/request-role", requireAuth, (req, res) => {
 });
 
 app.get("/api/admin/role-requests", requireAuth, (req, res) => {
-  if (req.user.role !== "admin") return res.status(403).json({ error: "Admin only" });
+  if (!["admin", "mod"].includes(req.user.role)) return res.status(403).json({ error: "Admin/Mod only" });
   db.all(
     `SELECT rr.*, u.username, u.email FROM role_requests rr
      JOIN users u ON rr.user_id = u.id WHERE rr.status = 'pending' ORDER BY rr.created_at ASC`,
