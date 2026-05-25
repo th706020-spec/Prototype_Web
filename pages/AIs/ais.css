@@ -36,6 +36,88 @@
   gap: 20px;
 }
 
+.ai-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+
+.ai-modal.is-open {
+  display: flex;
+  opacity: 1;
+}
+
+.ai-modal-content {
+  position: relative;
+  background: var(--clr-bg);
+  width: min(1100px, 96%);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+  opacity: 0;
+  transform: translateY(16px) scale(0.98);
+  transition: opacity .25s ease, transform .25s ease;
+}
+
+.ai-modal.is-open .ai-modal-content {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+@keyframes aiFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-modal.is-open .ai-page-header,
+.ai-modal.is-open .ai-settings,
+.ai-modal.is-open .ai-panel,
+.ai-modal.is-open .ai-chat-shell,
+.ai-modal.is-open .ai-chat-topbar {
+  animation: aiFadeUp .3s ease both;
+}
+
+.ai-modal-content.ai-modal-full {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  border-radius: 0;
+  padding: 0;
+}
+
+.ai-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--clr-border);
+  background: var(--clr-surface);
+  color: var(--clr-text);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 5;
+}
+
+body.ai-modal-open {
+  overflow: hidden;
+}
 .ai-card {
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
@@ -46,10 +128,23 @@
   transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
 
+.ai-card-button {
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  border: 1px solid var(--clr-border);
+  background: var(--clr-surface);
+  width: 100%;
+}
+
 .ai-card:hover {
   border-color: var(--clr-primary);
   box-shadow: 0 8px 20px rgba(58, 108, 244, 0.15);
   transform: translateY(-2px);
+}
+
+.ai-card-button:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .ai-card-title {
@@ -482,10 +577,18 @@ body.dark .ai-settings-banner {
   min-height: 0;
 }
 
+.ai-main {
+  padding-top: 64px;
+}
+
+.ai-chat-body.nav-hidden .ai-main {
+  padding-top: 0;
+}
+
 .ai-chat-page {
   flex: 1;
   display: flex;
-  padding: 64px 0 0;
+  padding: 0;
   transition: padding-top .25s ease;
 }
 
