@@ -1,0 +1,358 @@
+/* ═══════════════════════════════════════════════════════
+   buy.css — Premium Pricing Page
+   Dùng CSS variables từ style.css để tự động hỗ trợ
+   tất cả themes: dark, gruvbox, sage, nord, tokyo,
+   claude, tide, catppuccin, caffeine-white/black
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Layout ── */
+.buy-main {
+  flex: 1;
+  padding: 3rem 2rem 5rem;
+  transition:
+    background-color var(--transition),
+    color var(--transition);
+}
+
+.buy-container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* ── Page header ── */
+.buy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2.5rem;
+}
+
+.buy-header-text {
+  max-width: 640px;
+}
+
+.buy-title {
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1.22;
+  color: var(--clr-text);
+  margin-bottom: 0.6rem;
+  transition: color var(--transition);
+}
+
+.buy-subtitle {
+  font-size: 0.95rem;
+  color: var(--clr-muted);
+  line-height: 1.65;
+  transition: color var(--transition);
+}
+
+.buy-header-line {
+  width: 48px;
+  height: 3px;
+  background: var(--clr-primary);
+  border-radius: 2px;
+  margin-top: 0.5rem;
+  flex-shrink: 0;
+  transition: background-color var(--transition);
+}
+
+/* ── Plans grid ── */
+.buy-plans {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 1.5rem;
+  align-items: stretch;
+}
+
+/* ── Plan card ── */
+.buy-card {
+  background: var(--clr-surface);
+  border: 1.5px solid var(--clr-border);
+  border-radius: calc(var(--radius) * 1.5);
+  padding: 1.8rem 1.4rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-width: 0;
+  transition:
+    background-color var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
+}
+
+.buy-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--clr-primary);
+}
+
+.buy-card--featured {
+  border: 2px solid var(--clr-primary);
+  padding-top: 3rem; /* chừa chỗ badge */
+}
+
+/* ── Featured badge ── */
+.buy-featured-badge {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--clr-primary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 16px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ── Card header: tên gói + giá ── */
+.buy-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0;
+  min-height: 80px;
+}
+
+.plan-name {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--clr-text);
+  letter-spacing: -0.01em;
+  text-align: left;
+  transition: color var(--transition);
+}
+
+.plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  text-align: left;
+}
+
+.plan-amount {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--clr-text);
+  letter-spacing: -0.03em;
+  transition: color var(--transition);
+}
+
+.plan-period {
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--clr-muted);
+  transition: color var(--transition);
+}
+
+/* ── Divider ── */
+.buy-divider {
+  height: 1px;
+  background: var(--clr-border);
+  margin: 1.1rem 0;
+  transition: background-color var(--transition);
+}
+
+/* ── Feature list ── */
+.plan-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  margin-bottom: 1.5rem;
+}
+
+.plan-features li {
+  font-size: 0.875rem;
+  color: var(--clr-muted);
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  line-height: 1.55;
+  text-align: left;
+  transition: color var(--transition);
+}
+
+.plan-features li.plan-feature--bold {
+  font-weight: 700;
+  color: var(--clr-text);
+}
+
+.plan-check {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 1.5px solid var(--clr-primary);
+  color: var(--clr-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition:
+    border-color var(--transition),
+    color var(--transition);
+}
+
+.plan-check svg {
+  width: 8px;
+  height: 8px;
+}
+
+/* ── Buttons ── */
+.buy-btn {
+  width: 100%;
+  padding: 11px 0;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    color var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition);
+  border: 1.5px solid var(--clr-primary);
+  background: transparent;
+  color: var(--clr-primary);
+  margin-top: auto;
+  font-family: inherit;
+}
+
+.buy-btn:hover {
+  background: var(--clr-card-hover);
+}
+
+.buy-btn--filled {
+  background: var(--clr-primary);
+  color: #fff;
+}
+
+.buy-btn--filled:hover {
+  background: var(--clr-primary-h);
+  box-shadow: 0 4px 14px rgba(58, 108, 244, 0.3);
+}
+
+/* ── Highlight cards ── */
+.buy-highlights {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.buy-highlight {
+  border-radius: calc(var(--radius) * 1.5);
+  padding: 1.6rem 1.4rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.1rem;
+  transition:
+    background-color var(--transition),
+    border-color var(--transition);
+}
+
+/* Primary highlight: dùng màu primary của theme */
+.buy-highlight--primary {
+  background: var(--clr-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.buy-highlight--primary::after {
+  content: "";
+  position: absolute;
+  right: -20px;
+  bottom: -20px;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.buy-highlight--primary .buy-highlight-icon {
+  background: rgba(255, 255, 255, 0.18);
+}
+.buy-highlight--primary .buy-highlight-title,
+.buy-highlight--primary .buy-highlight-desc {
+  color: #fff;
+}
+
+/* Muted highlight: dùng card-hover của theme */
+.buy-highlight--muted {
+  background: var(--clr-card-hover);
+  border: 1px solid var(--clr-border);
+}
+
+.buy-highlight--muted .buy-highlight-icon {
+  background: color-mix(in srgb, var(--clr-primary) 15%, transparent);
+  color: var(--clr-primary);
+}
+
+.buy-highlight--muted .buy-highlight-title {
+  color: var(--clr-text);
+}
+.buy-highlight--muted .buy-highlight-desc {
+  color: var(--clr-muted);
+}
+
+.buy-highlight-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.buy-highlight-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.buy-highlight-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+  transition: color var(--transition);
+}
+
+.buy-highlight-desc {
+  font-size: 0.875rem;
+  line-height: 1.65;
+  transition: color var(--transition);
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .buy-plans {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .buy-main {
+    padding: 2rem 1rem 4rem;
+  }
+  .buy-plans {
+    grid-template-columns: 1fr;
+  }
+  .buy-highlights {
+    grid-template-columns: 1fr;
+  }
+  .buy-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .buy-card--featured {
+    padding-top: 3rem;
+  }
+}
